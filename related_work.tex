@@ -1,0 +1,32 @@
+\section{Related Work\label{sec:Related_Work}}
+
+A large body of work has focused on storage-layer applications that perform file-system specific processing for improving performance or reliability. Seminal work on semantically-smart disks~\cite{Sivathanu03} used probing to gather detailed knowledge of file system behavior, allowing functionality or performance to be enhanced transparently at the block layer. The probing was designed for Ext4-like file systems and would likely require changes for copy-on-write and log-structured file systems. The Spiffy annotations avoid the need for probing, helping provide accurate block type information based on runtime interpretation that is mostly file-system agnostic.
+
+I/O shepherding~\cite{Gunawi07} improves reliability by using file structure information to implement checksumming and replication. The file system semantic information is provided to the storage layer I/O shepherd by modifying the file system and the buffer-cache code. Our approach will enable I/O shepherding without requiring any such changes. Furthermore, our approach enables adding support for a new file system more easily.
+
+A type-safe disk extends the disk interface by exposing primitives for block allocation and pointer relationships~\cite{Sivathanu06}, which helps enforce invariants such as preventing accesses to unallocated blocks, or allowing accesses to a Block X only after a Block Y that has a valid reference to Block X has been accessed. 
+Using a type-safe disk requires extensive modifications to file systems. We believe that our runtime interpretation approach makes it feasible to enforce such type-safety invariants for existing file systems.
+
+Serialization of structured data has been explored through interface languages such as ASN.1~\cite{steedman1993abstract} and Protocol Buffers~\cite{varda2008protocol}, which allow programmers to define their data structures so that marshaling routines can be generated for them. However, the binary serialization format for the structures is specified by the protocol and not under the control of the programmer. As a result, these languages cannot be used to interpret the existing binary format of a file system.
+
+Data description languages such as Hammer~\cite{pattersonhammer} and PADS~\cite{fisher2011pads} allow fine-grained byte-level data formats to be specified. However, they have limited support for non-sequential processing, and thus their parsers cannot interpret file system I/O, where a graph traversal is required rather than a sequential scan. Furthermore, with online interpretation, this traversal is performed on a small part of the graph, and not on the entire data.
+
+Nail~\cite{bangert2014nail} shares many goals with our work. Its grammar provides the ability to specify arbitrarily computed fields. It also supports non-linear parsing, but its scope is limited to a
+single packet or file, and so it does not support references to external objects. Our annotation language overcomes this limitation by explicitly annotating pointers, which defines how file system metadata reference each other. We also provide support for address spaces, so that address values can be mapped to user-specified physical locations on disk.
+
+Several projects have explored C extensions for expressing additional semantic information~\cite{Necula2002,zhou2006safedrive,torvalds2007sparse}. CCured~\cite{Necula2002} enables type and memory safety, and the Deputy Type System~\cite{zhou2006safedrive} prevents out-of-bound array errors. Both projects annotate source code, perform static analysis, and add runtime checks, but they are designed for in-memory structures.
+
+Symbolic execution~\cite{cadar2008exe}, model checking~\cite{yang2006using} and fuzz-testing~\cite{AmericanFuzzyLop} have been used to find file system bugs. 
+%These approaches involve discovering bugs by either using static analysis or by crafting inputs that would trigger faulty corner cases. 
+In contrast, we proactively avoid bugs by adding type safety checks in the generated parsing and serializing routines. Nonetheless, these technique would be helpful for detecting annotation errors that may
+be encountered during the development phase.
+
+Formal specification approaches for file systems~\cite{amani2012towards,chen2015using}
+require building a new file system from scratch, while our work focuses on building tools for existing file systems. Chen et al.~\cite{chen2015using} use logical address spaces as abstractions
+for writing higher-level file system specifications in a concise manner.
+%without needing to handle the details of the underlying implementation that has already been proved. 
+This idea inspired our use of an address space type for specifying pointers. Another method for specifying pointers is by defining paths that enable traversing the metadata tree to locate a metadata object, such as finding the inode structure
+when given an inode number~\cite{hesselink2009formalizing,gardner2014local}. These approaches focus on the correctness of file-system operations at the virtual file system layer, whereas our goal is to specify the
+physical structures of file systems.
+
+\vspace{-1ex}

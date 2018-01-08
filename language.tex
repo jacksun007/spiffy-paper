@@ -1,0 +1,336 @@
+\appendix
+
+\begin{table*}
+\begin{centering}
+\begin{tabular}[t]{l>{\raggedright}p{0.2\textwidth}l>{\raggedright}p{0.41\textwidth}}
+\multicolumn{1}{c}{\textbf{Keyword}} & \multicolumn{1}{c}{\textbf{Description}} & \multicolumn{1}{c}{\textbf{Arguments}} & \multicolumn{1}{c}{\textbf{Meaning}}\tabularnewline
+\hline 
+\texttt{FSSTRUCT} & File system structure & \texttt{name=IDENT} & Name of the structure for cross referencing\tabularnewline
+ &  & \texttt{unit=UNIT} & Can be\texttt{ object}, \texttt{container}, or \texttt{extent}\tabularnewline
+\texttt{FSSUPER} & File system super block & \texttt{base=TYPE,when=BOOL} & Structure inherits from base when condition is true\tabularnewline
+ &  & \texttt{size=INT} & Size of the structure\tabularnewline
+ &  & \texttt{location=INT} & Location of the super block or placement constraint\tabularnewline
+\hline 
+\texttt{POINTER} & \multirow{2}{0.2\textwidth}{Field is a pointer to a file system structure} & \texttt{aspc=IDENT} & Name of an address space type (not used by \texttt{FIELD)}\tabularnewline
+ &  & \texttt{type=TYPE} & Type of the referenced structure\tabularnewline
+\texttt{FIELD} & \multirow{3}{0.2\textwidth}{Field is an offset to a structure within the same container} & \texttt{when=BOOL} & Pointer is valid when condition is true\tabularnewline
+ &  & \texttt{size=INT} & Size of the referenced metadata\tabularnewline
+ &  & \texttt{name=IDENT,expr=INT} & Name of an implicit pointer, its expression\tabularnewline
+\hline 
+\texttt{ADDRSPACE} & An address space & \texttt{name=IDENT} & Name of the address space type\tabularnewline
+\hline 
+\texttt{CHECK} & Constraint check & \texttt{expr=BOOL} & Condition for the structure's correctness\tabularnewline
+\hline 
+\texttt{VECTOR} & 1. Defines a vector type & \texttt{name=IDENT} & Name of the vector or the field name of the array\tabularnewline
+ & \multirow{2}{0.2\textwidth}{2. Defines a flexible array field} & \texttt{type=TYPE} & Structure type of the contained elements\tabularnewline
+ &  & \texttt{count=INT} & Number of elements in the vector\tabularnewline
+ &  & \texttt{size=INT} & Size of the vector, in bytes\tabularnewline
+ &  & \texttt{sentinel=BOOL} & Sentinel value that specifies the end of vector\tabularnewline
+\hline 
+\end{tabular}
+\par\end{centering}
+\begin{centering}
+\medskip{}
+\begin{minipage}[t]{0.9\textwidth}%
+\texttt{IDENT} is a valid C identifier. \texttt{TYPE} is the type
+name of a structure or vector type. \texttt{BOOL} and \texttt{INT}
+are syntactically valid, dynamically scoped, C expressions that evaluate
+to a boolean and integer type.%
+\end{minipage}
+\par\end{centering}
+\centering{}\caption{\label{tab:annotation_language}Spiffy file system annotations.}
+\end{table*}
+
+\section{Annotation Language\label{sec:Annotation_Language}}
+
+Spiffy uses annotations on C structures to specify the format of file-system
+structures. We chose this approach to reduce duplication of structure
+definitions. The annotations are defined using C preprocessor macros.
+They are designed to be compatible with existing code by expanding
+to empty code during normal compilation. Although many annotations
+can be added to existing structures, sometimes we need to add new
+structures or modify existing structures when they are a poor fit
+for our needs.
+
+%In \ref{subsec:Annotation-Effort}, we describe the effort needed to write annotations for modern file systems.
+
+
+Table~\ref{tab:annotation_language} shows the list of annotations
+supported by Spiffy. Each annotation is written using one or more
+keywords, followed by their arguments. We now describe each annotation.
+
+\paragraph{FSSTRUCT, FSSUPER}
+
+These annotations are written by replacing the \texttt{struct} keyword
+in a C structure with \texttt{FSSTRUCT} or \texttt{FSSUPER}. They
+help distinguish file system metadata from in-memory file system structures
+so that our compiler only parses C data structures marked with these
+two annotations. The \texttt{FSSUPER} annotation identifies the root
+of the file system. The \texttt{location} argument describes its physical
+location as an offset (in bytes) from the beginning of the file system
+image. For \texttt{FSSTRUCT}, the \texttt{location} argument optionally
+specifies its placement constraint. 
+The \texttt{name} argument is used by a descendant to reference
+this structure (see \ref{subsec:Annotation-Design}). The \texttt{unit}
+argument specifies the access unit of the structure, with \texttt{object} 
+being the default unit.
+
+The \texttt{base-when} argument enables supporting context-sensitive types. It defines a structure that is derived from a base structure when the condition is true. Conceptually, the derived structure is appended to the base structure, similar to the way inheritance is implemented in object oriented languages. Figure~\ref{fig:f2fs_inode} shows an example in which the F2FS inode structure is inherited by either a directory inode structure or a file inode structure, depending on the mode of the inode. The use of two derived inode structures allows using different types in the two structures. For example, we use a \texttt{dir\_block} pointer in the directory inode and a \texttt{data\_block} pointer in the file inode.
+
+% (jsun): the example is no longer valid for F2fs
+%Spiffy also supports polymorphism. For example, \texttt{ext3\_inode\_block} is defined as a vector of \texttt{ext3\_inode} structures, even though the actual type of each inode may be a directory or file inode.
+Notice that the two arguments in the \texttt{FSSTRUCT} definition of \texttt{f2fs\_inode} reference the super block using the name \texttt{sb}. 
+In addition, the \texttt{location} argument specifies its
+placement constraint so that incorrect allocation will not result in clobbering
+parts of the F2FS static metadata area. The \texttt{\$self} notation refers
+to the address of the container (see Figure~\ref{fig:address-struct}). 
+
+\begin{figure}[t]
+\begin{lstlisting}
+#define BLOCK_SIZE 1 << sb.log_blocksize
+FSSTRUCT(location=$self.id >= sb.main_blkaddr,
+         size=BLOCK_SIZE) f2fs_inode {
+  __le16 i_mode;
+  ...
+};
+typedef FSSTRUCT(base=struct f2fs_inode, 
+         when=self.i_mode & S_IFDIR) {
+  POINTER(aspc=block, type=dir_block)
+  __le32 i_addr[DEF_ADDRS_PER_INODE];        
+  POINTER(aspc=nid, type=dir_direct_block)
+  __le32 i_dnid[2];
+  ...
+} f2fs_dir_inode;
+typedef FSSTRUCT(base=struct f2fs_inode, 
+	     when=self.i_mode & S_IFREG) {
+  POINTER(aspc=block, type=data_block)
+  __le32 i_addr[DEF_ADDRS_PER_INODE];            
+  POINTER(aspc=nid, type=data_direct_block)
+  __le32 i_dnid[2];
+  ...
+} f2fs_reg_inode;
+\end{lstlisting}
+\caption{\label{fig:f2fs_inode}Annotation for file and directory inode structures in F2FS}
+\end{figure}
+% (jsun): unfortunately in f2fs there is no array of inode since 
+% f2fs inode itself is the size of a block
+%VECTOR(name=ext3_inode_block, type=struct ext3_inode, size=BLOCK_SIZE);
+
+\paragraph{POINTER, FIELD, ADDRSPACE}
+
+The \texttt{POINTER} annotation is used to specify the address type
+and the pointed-to type of a pointer. It allows fetching a structure
+from disk and parsing it with the correct type information. As an
+example, we annotate the \texttt{s\_journal\_inum }field in the Ext4
+super block, shown in Figure~\ref{fig:ext4_super_block}, to indicate
+that it points to an \texttt{ext4\_journal} type, in the file address
+space.
+
+\begin{figure}
+\begin{lstlisting}
+FSSUPER(name=sb, location=1024) 
+				 ext4_super_block {
+  __le32 s_blocks_count;     // # of blocks
+  __le32 s_log_block_size;   // block size
+  __le32 s_blocks_per_group; // blocks per group 
+  __le16 s_inode_size;       // size of inode
+  ...
+  /* pointer to journal in file address space */
+  POINTER(aspc=file, type=ext4_journal)
+  __le32 s_journal_inum;     
+  ...
+  /* implicit pointer to group descriptors */         
+  POINTER(name=s_block_group_desc, aspc=block, 
+          type=ext4_group_desc_table,                  
+          expr=self.s_log_block_size ? 1 : 2);
+};
+\end{lstlisting}
+\caption{\label{fig:ext4_super_block}Annotated Ext4 super block.}
+\end{figure}
+
+File systems may use the same pointer field to reference different
+types of metadata. The \texttt{when} argument is used to specify context-sensitive
+pointers. For example, Figure~\ref{fig:btrfs_super_block} shows
+that the Btrfs ``tree of tree'' root points to a B-tree leaf when
+the level of the tree is 0, or else it points to a B-tree node. In
+this case, two pointer annotations are needed to specify each of the
+pointed-to types and their when clauses. The \texttt{size} argument
+is useful when the structure that contains the pointer also stores
+the information about the size of the pointed-to structure. This may
+be the case when the pointed-to structure is variable-sized or a data
+block.
+
+\begin{figure}
+\begin{lstlisting}
+ADDRSPACE(name=raid);
+FSSUPER(name=sb, location=0x10000) 
+                 btrfs_super_block {
+  ...
+  POINTER(aspc=raid, type=struct btrfs_node, 
+          when=self.root_level > 0)     
+  POINTER(aspc=raid, type=struct btrfs_leaf, 
+          when=self.root_level == 0) 
+  __le64  root; 
+  ...
+      u8  root_level;  /* depth of root tree */
+  ...
+} __attribute__ ((__packed__));
+\end{lstlisting}
+\caption{\label{fig:btrfs_super_block}Annotated Btrfs super block.}
+\end{figure}
+
+Spiffy supports implicit pointers with the \texttt{name-expr} argument,
+which names a pointer and specifies an expression for computing the
+address value. For example, Figure~\ref{fig:ext4_super_block} shows
+that we added an implicit field to the end of the Ext4 super block,
+because it does not have a pointer field to the block group descriptor
+table. The descriptor table is located at block 2 if the block size
+is 1024 bytes, or block 1 for every other block size.
+
+The \texttt{FIELD} annotation is similar to a pointer, but it is used
+to specify offset fields that reference a structure within the \emph{same
+}container. Unlike a file system pointer, a field access does not
+require fetching data from disk, and hence it does not require an
+address space.
+
+The \texttt{ADDRSPACE} annotation specifies an address space for a
+pointer type. Figure~\ref{fig:btrfs_super_block} shows that the
+Btrfs pointers have a raid address type. Later, in \ref{sec:Implementation},
+we describe how the annotation developer implements this annotation.
+
+\paragraph{VECTOR}
+
+The \texttt{VECTOR} annotation helps specify variable-length arrays
+of structures. It can be placed inside or outside structure definitions.
+When placed inside, it defines an implicit field of a structure. When
+placed outside, it defines a new type, such as the \texttt{ext4\_dir\_block}
+structure in Figure~\ref{fig:ext4_extent_block}. The size of the vector
+can be specified using any of the \texttt{count}, \texttt{size} or
+\texttt{sentinel} arguments. The \texttt{size} argument is useful
+when the elements are variable-sized and that the number of elements
+cannot be easily deduced. The \texttt{sentinel} argument specifies
+a boolean condition for determining the last element of a vector.
+All combinations of the three arguments are valid, and parsing ends
+as soon as one of the stopping conditions are met. Vector types have
+access units but the compiler can automatically deduce this information
+based on the access units of their elements. A vector that contains
+objects is a container (e.g., an inode block), and a vector that contains
+containers or extents is an extent (e.g., inode table). 
+
+\paragraph{CHECK}
+
+The \texttt{CHECK} annotation allows specification of arbitrary constraints
+associated with a structure. These checks are performed both after parsing a structure, and before serializing it. The annotation acts as an assertion, which upon failure, results in a parsing or a serialization error. Figure~\ref{fig:ext4_extent_block} shows an example where the \texttt{CHECK} annotation is used to verify that the extent header contains the correct magic number.
+
+\subsection{Ext4 \label{subsec:Ext4}}
+
+The Linux Ext4 file system is the most popular Linux file system. Unlike its
+predecessor Ext3, it uses extent-based allocation instead of block-based allocation,
+which significantly reduces metadata block usage for contiguous allocations.
+We have modified and added some Ext4 data structures so that they
+can can be specified correctly. For backward compatibility, the Ext4
+developers decided to leave the \texttt{i\_block} field of the inode structure
+definition alone, although the space it occupies is now used for 
+an extent tree. We redefined an Ext4 inode so that it now properly contains 
+a extent header followed by four extent entries. We also support Ext3's block-based allocation scheme, which is not shown here for brevity. We also added a definition for the extent leaf blocks, shown in Figure~\ref{fig:ext4_extent_block}, which was omitted in the original header file.
+\begin{figure}
+\begin{lstlisting}
+FSSTRUCT(name=eh) ext4_extent_header {
+	__u16	eh_magic, eh_entries;	
+	__u16	eh_max,   eh_depth;	
+	__u32	eh_generation;
+	CHECK(expr=self.eh_magic == EXT4_EXT_MAGIC);
+};
+FSSTRUCT(size=BLOCK_SIZE) ext4_extent_leaf {
+    struct ext4_extent_header eb_hdr;
+    FIELD(count=self.eb_hdr.eh_entries)
+    struct ext4_extent eb_extent[];
+};
+VECTOR(name=ext4_dir_block, size=BLOCK_SIZE,
+	   type=struct ext4_dir_entry);
+\end{lstlisting}
+\caption{\label{fig:ext4_extent_block}Annotations for Ext4 extent header and leaf, and Ext4 directory block}
+\end{figure}
+
+\subsection{Btrfs\label{subsec:Btrfs}}
+
+Btrfs is a copy-on-write file system that stores in data structures
+in a number of B-trees~\cite{btrfs2013}. Each B-tree uses two types
+of containers, an internal node that contains a sorted list of key-pointer
+pairs, and a leaf node that contains a set of keys and their associated
+metadata objects. The internal node structure is relatively simple,
+so we describe the annotation for a leaf node. Btrfs places all of
+the file system's metadata objects (e.g., inode, directory entries)
+in reverse order, starting from the end of the B-tree leaf block,
+as shown in Figure~\ref{fig:Btrfs-B-tree-leaf}. For each metadata
+object, there is a corresponding \texttt{btrfs\_item} object that
+stores the offset and size of the metadata object. For example, \texttt{items{[}0{]}}
+stores the offset and size for \texttt{data{[}0{]}.}
+
+Figure~\ref{fig:btrfs_item} shows the annotated Btrfs leaf node
+(\texttt{btrfs\_leaf}), containing a vector of \texttt{btrfs\_item}
+structures. The \texttt{btrfs\_item} structure defines implicit fields
+with the \texttt{FIELD} annotation. These fields use the \texttt{when}
+clause to point to all the different types of metadata objects that
+can be stored in a leaf object. The \texttt{offset} field is an offset
+to a metadata object from the end of the header field of \texttt{btrfs\_leaf},
+and so we must add this value to obtain the offset from the beginning
+of the container (the leaf node).
+
+\begin{figure}
+\centering{}\includegraphics[width=1\columnwidth]{figures/btrfs_leaf}\caption{\label{fig:Btrfs-B-tree-leaf}Btrfs leaf node layout.}
+\end{figure}
+
+\begin{figure}
+\begin{lstlisting}
+FSSTRUCT(unit=container,
+         size=sb.leafsize) btrfs_leaf {
+  struct btrfs_header header;
+  VECTOR(name=items, type=struct btrfs_item,
+         count=self.header.nritems)
+};
+
+#define METADATA_LOCATION \
+  (sizeof(struct btrfs_header)+self.offset)
+FSSTRUCT() btrfs_item { 	
+  struct btrfs_disk_key key; 	
+  __le32 offset, size;
+  FIELD(name=metadata, size=self.size,
+        type=struct btrfs_file_extent_item,  
+        expr=METADATA_LOCATION,
+        when=self.key.type == 
+             BTRFS_EXTENT_DATA_KEY)
+  FIELD(name=metadata, size=self.size,
+        type=struct btrfs_inode_item, 
+        expr=METADATA_LOCATION,
+        when=self.key.type == 
+             BTRFS_INODE_ITEM_KEY);
+  /* followed by 15 more implicit fields,
+     each with a different type */
+};
+\end{lstlisting}
+
+\caption{\label{fig:btrfs_item}Btrfs leaf node and item structure.}
+\end{figure}
+
+\subsection{F2FS\label{subsec:F2FS}}
+
+\begin{figure}
+\begin{lstlisting}
+typedef FSSTRUCT(name=cphdr, rank=container,
+  base=struct f2fs_checkpoint) {
+  POINTER(repr=block, type=f2fs_orphan_blocks,
+  expr=$self.id + 1, 
+  when=self.ckpt_flags & CP_ORPHAN_PRESENT_FLAG);
+  ...
+} f2fs_checkpoint_header;
+\end{lstlisting}
+
+\caption{\label{fig:checkpoint-header}F2FS checkpoint header annotations.}
+\end{figure}
+
+F2FS is a relatively new, log-structured file system optimized for NAND flash storage devices. Its on-disk layout is partitioned into fixed-sized segments composed of a set of contiguous blocks, with each segment sized in units of the SSD's erase block size to minimize wear. The file system contains five static metadata areas, and one main area for data blocks and dynamically allocated metadata, such as the inode shown in Figure~\ref{fig:f2fs_inode}.
+The static metadata area consists of a pair of checkpoint packs, as shown in Figure \ref{fig:F2FS-checkpoint-packs}, and various lookup tables for space and pointer management.
+
+A unique challenge with annotating F2FS is its use of heterogeneous extents, i.e., extents with different types of metadata blocks. F2FS has a super block to the first checkpoint pack, shown in Figure~\ref{fig:F2FS-checkpoint-packs}. The remaining metadata blocks must be referenced by using implicit pointers. However, the block addresses of these metadata
+blocks depend on the address of the checkpoint header. Therefore, we use a special variable, \texttt{\$self}, to allow implicit pointers to specify metadata blocks that exist at certain block offsets from the current container. Figure~\ref{fig:checkpoint-header} shows the annotation for the implicit pointer that points to a vector of orphan blocks.

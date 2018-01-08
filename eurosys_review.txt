@@ -1,0 +1,281 @@
+===========================================================================
+                          EuroSys 2017 Review #7A
+---------------------------------------------------------------------------
+   Paper #7: Spiffy: Interpreting Metadata for File System Applications
+---------------------------------------------------------------------------
+
+                 Reviewer expertise: 2. Some familiarity
+              How new is the topic?: 1. Well-known topic (key results
+                                        available since years)
+How relevant are the results and contributions?:
+                                     3. The paper has new ideas on a known
+                                        problem
+How complete are the results and contributions?:
+                                     2. System, results, or related work
+                                        are incomplete
+      What is the potential impact?: 3. Paper will be relevant within a
+                                        specialized group
+
+                         ===== Paper summary =====
+
+The paper proposes an annotation framework for filesystems that allows external programs to access and understand metadata via a standard API.
+
+                     ===== Comments for authors =====
+
+I really liked the goal of the paper -- providing a standard library that allows external programs to understand metadata is a very interesting goal. However, the goal seems ambitious and I didn't get a clear sense of whether the paper adequately solved the problem.
+
+One issue is that I never saw a clear description of the standard API of the library. Part of the paper's pitch was that all external programs would be able to program against a standard API for accessing filesystem metadata; what's missing is a figure showing this exact API. Right now we have to infer the API from code fragments.
+
+Something else that's missing from the paper is a discussion of limitations; what kind of external programs can you not support? A different way of posing this question is: how general is the approach? What are the assumptions you make about what a filesystem is (e.g., does it have to be a POSIX filesystem?)?
+
+For online applications, how does concurrency control work? What if things change as you are traversing the metadata?
+
+Are applications allowed to make changes to metadata? If so, who is responsible for failure atomicity? (perhaps the answer is that this is the job of the external application, and the library makes this no harder). Are online applications allowed to make changes? Again, what about concurrency control in this case?
+
+I understand that from the superblock it's possible to trace out the entire filesystem metadata superstructure. But how do external programs deal with large deviations in the mechanisms used within the filesystems? For instance, if I wanted to write an external program that counted the number of free blocks, how would this code work without modification against a filesystem that uses allocation bitmaps vs. some other data structure? I think the paper probably does solve this kind of problem, but I can't figure out how.
+
+In general, the whole point of this kind of framework is generality. While it's great that you implemented 3 filesystems and 2 applications (which I think meets the bar), it'd help immensely if you outlined how the framework would work seamlessly for other filesystems (perhaps not as important, if you argue that all filesystems look pretty similar) and other applications (way more important). Even 2-3 lines for each application would help.
+
+A naive thought as someone who doesn't work on filesystems: I wonder if an alternative approach would be to just standardize block formats across filesystems (in the same way that all TCP protocols typically share a common packet format  and are interoperable); I realize this is probably logistically impossible, wondering if it was ever proposed.
+
+===========================================================================
+                          EuroSys 2017 Review #7B
+---------------------------------------------------------------------------
+   Paper #7: Spiffy: Interpreting Metadata for File System Applications
+---------------------------------------------------------------------------
+
+                 Reviewer expertise: 2. Some familiarity
+              How new is the topic?: 2. Established topic (quite a bit of
+                                        literature available)
+How relevant are the results and contributions?:
+                                     3. The paper has new ideas on a known
+                                        problem
+How complete are the results and contributions?:
+                                     4. Some details missing but nothing
+                                        critical
+      What is the potential impact?: 3. Paper will be relevant within a
+                                        specialized group
+
+                         ===== Paper summary =====
+
+This paper proposes Spiffy, a language for annotating file system data structures defined in the C language.  The intent
+is to reduce the burden of developing file-system aware storage applications (such as defragmentation tools, file system checkers,
+data recovery tools) that require detailed knowledge of the layout of the file system.  The proposed approach requires file system developers
+to specify the format of their file systems using the Spiffy language so that the file metadata required by the storage apps can be idenitifed
+and interpreted correctly and automatically.  This relieves the application developers from spending time and effort learning the specifics of
+each file system format on which their application is intended to be used.  The approach tackles a number of challenges including capturing
+aspects of file system structures and their relationships that are not captured by their declarations in header files such as inferring information
+from typical naming conventions used (e.g., that a pointer may have "ptr" in its name), the fact that file system structures often reference other structures
+(e.g., to learn size of an inode structure, one must lookup a field in the superblock), the semantics of metadata fields may be context sensitive (e.g., pointers in an
+inode structure may refer to directory blocks or data blocks depending ont he type of the inode), and the placement of structures on disk may be implicit in the
+code that operates on them (e.g., an instance of structure B optionally follows structure A).   They provide techniques for addressing these challenges, they describe
+the annotation language proposed, the implementation of a compiler that parses the annotations, and two storage applications (offline file system dump tool and online storage layter cache)
+that were built using the library produced
+by the compilation of the annotations in the Spiffy framework.  The authors have written annotations for the Linux Ext3, Btrfs, and F2FS file systems and show that only a
+few hundred lines of annotated code is required.  They also show that the storage layer cache application they built with their annotated-derived library performs comparably to
+manually written counterparts that required chaning the file system code extensively.
+
+                     ===== Comments for authors =====
+
+This is an interested and well-executed approach.  A few comments for improving the paper:
+
+The paper is missing the API provided by the Spiffy library to file-system applications.  You have over a column of space that is unused.  Adding the API would
+be helpful here.
+
+How easy is it to extend the annotation language and do you envision any need to do so?
+
+The paper claims in the start of Section 3 that no file system source code is required to be modifed using the Spiffy approach but then later in the paper
+(same section and evaluation section), the authors state that they have added new structures or modified existing structures as needed.  Albeit the modifications were
+small, but this is in direct conflict with the earlier claim made in at least two places I spotted.  I would suggest the authors tone down the claim.
+
+The fact that the Spiffy approach was not applied to Ext4 is a disadvantage for the paper.  It indicates that, like all annotation approaches, the effort in annotating
+is directly related to the size and complexity of the code being annotated.   Some discussion is warranted.  In particular, the authors should state their estimate
+of the amount of effort required for Ext4 to be annotated.
+
+Overall an interesting approach that could have useful impact for file-system application developers.
+
+===========================================================================
+                          EuroSys 2017 Review #7C
+---------------------------------------------------------------------------
+   Paper #7: Spiffy: Interpreting Metadata for File System Applications
+---------------------------------------------------------------------------
+
+                 Reviewer expertise: 2. Some familiarity
+              How new is the topic?: 2. Established topic (quite a bit of
+                                        literature available)
+How relevant are the results and contributions?:
+                                     1. Results are incremental over what
+                                        is known
+How complete are the results and contributions?:
+                                     4. Some details missing but nothing
+                                        critical
+      What is the potential impact?: 2. Paper will have some impact
+
+                         ===== Paper summary =====
+
+Spiffy is a language for describing the on-disk layout of fileystem
+metadata by annotating the file system's implementation (i.e. C struct
+declarations for on-disk formats). Spiffy uses these annotations to
+generate accessor code that simplifies the implementation of
+filesystem utilities that operate on the on-disk representation. The
+paper describes the Spiffy language, and describes the results of
+annotating three Linux filesystems (ext3, btrfs, and F2FS) and
+implementing two utilities based on Spiffy: an offline filesystem dump
+utility, and an online block cache that interprets filesystem metadata
+to prioritise small files. Performance results for the cache show that
+it is effective for a synthetic webserver workload (using the ext3
+filesystem).
+
+                     ===== Comments for authors =====
+
+Thank you for the submission. This is a well-written paper, and I have
+little to quarrel with either the motivation or approach. My main
+concern is that you haven't really shown that the Spiffy annotations
+permit filesystem-independence in tools, or that the annotations are
+sufficiently general to handle a range of filesystems and (probably
+more importantly) filesystem-tools.
+
+The biggest part of the evaluation is devoted to a performance
+analysis of the LRU-P cache, but this does not directly teach us
+anything about Spiffy, and performance was not a primary concern: It's
+reassuring that you can get reasonable performance, but this doesn't
+show what performance would be for a similar system built without
+Spiffy, and in any case if there was any performance impact from
+Spiffy I would expect to see it in CPU overhead, not disk throughput.
+
+Instead, it would be more compelling to see some other examples of
+utilities using the Spiffy framework, and showing (hopefully!) how
+easy they are to write and how much filesystem-specific code is
+required. One informative way to do this comparison might be to take
+an existing tool for an existing filesystem and "port" it to Spiffy;
+presumably a lot of code would no longer be needed? This would also
+allow for a head-to-head performance comparison.
+
+Could Spiffy annotations simplify the implementation of filesystems
+themselves?
+
+
+Detailed comments:
+
+Page 4 (Approach): Regarding "Our approach decouples file systems from
+file system tools, reducing the effort to n +k (n annotated file
+systems and k tools)", while your approach certainly reduces the
+amount of file-system logic in a tool, it seems very unlikely that you
+will be able to keep all file-system-specific logic out of the
+tool. For example, if the two systems have very different kinds of
+metadata, or fundamentally differing structure (e.g. log-structured vs
+tree-based), you surely can't paper over that. In fact, even including
+the dump tool, the paper doesn't show much evidence that you've
+managed to remove filesystem-specific logic from the clients of
+Spiffy.
+
+Page 8 (Implementation): Regarding "We verify that the boolean and
+integer expressions used in annotations are syntactically and
+semantically correct by attempting to compile the expressions using a
+C++ compiler", I agree that this gives you a check of syntactic
+correctness, but I don't see how the ability to merely compile some
+code tells you anything about its _semantics_.
+
+Page 9 (Implementation): Regarding "The generated library performs
+various types of error-checking operations... These checks are
+essential if an application aims to handle file system corruption",
+how are errors reported/handled? Could you use the library to
+implement fsck, or can it only be used on correct filesystems?
+
+Page 11 (Annotation Effort): Regarding "less than one-third of the
+total line count for all the file systems", I assume you mean less
+than 1/3 of the annotation (i.e. headers with on-disk structure
+definitions) line count. The total LOC in the file system
+implementation would be much higher.
+
+Page 11 (Cache Performance): This kernel version is almost 3 years
+old. That's quite a long time in Linux development.
+
+
+Nits:
+Page 4 (Approach): There's a mismatched ) in line 5 of Fig 1.
+
+Page 7 (Annotation Language): rather than "raid address type", maybe
+"raid" address type or address type named "raid" since the word raid
+has no meaning in this context.
+
+Page 13 (Bibliograohy): "Brian Buckeye and Kevin Liston. Recovering
+deleted files in Linux. Retrieved February, 2006." -> From where?
+Published how?
+
+===========================================================================
+                          EuroSys 2017 Review #7D
+---------------------------------------------------------------------------
+   Paper #7: Spiffy: Interpreting Metadata for File System Applications
+---------------------------------------------------------------------------
+
+                 Reviewer expertise: 3. Knowledgeable
+              How new is the topic?: 2. Established topic (quite a bit of
+                                        literature available)
+How relevant are the results and contributions?:
+                                     3. The paper has new ideas on a known
+                                        problem
+How complete are the results and contributions?:
+                                     2. System, results, or related work
+                                        are incomplete
+      What is the potential impact?: 3. Paper will be relevant within a
+                                        specialized group
+
+                         ===== Paper summary =====
+
+This paper describes Spiffy that annotates data structures in existing C source code of file systems (Ext3,Btrfs,F2FS) and generates libraries automatically to interpret file system metadata. Having this logic in one place (annotations + spiffy) rather than this logic getting implemented  several times in several applications by several people (file sytem checker, partition editors, libraries) goes a long way to reduce the bugs in such tools.
+
+                     ===== Comments for authors =====
+
+I believe Spiffy is an improvement over existing techniques for discovering file system data structures and using that knowledge in other applications.
+
+However, I have a number of serious concerns about this paper which lead me to believe that this paper is too premature for publication.
+
+First, I believe the authors are missing important very related work.  First, this paper never mentions any of the previous work on "semantically-smart disks"; that previous work focused on automatically inferring file system data structures or using embedded knowledge of those data structures in another layer.  The original paper on that previous work used this same caching application for motivation (identifying small files and meta-data to give them caching preference) and later papers looked at more challenging services that require correct classification between meta-data and data (secure delete).    Second, this paper does not mention "type-safe disks" which have a similar approach to this work for explicitly labeling pointers vs data in disk blocks.  While I do think Spiffy contains contributions beyond this previous work, those distinctions must be made by these authors.
+
+Second, the case studies and evaluation in this paper do not convince me that their classifications are correctly performed at run-time.  In the Introduction, the authors list a great set of motivating storage applications that need file system knowledge; however, they only look at two: an offline dump tool (which they show no results for) and a caching layer (that does not need correct classification to see some performance improvement for a rather contrived workload setup).    I would like to see some analysis showing how correct their classifications are by comparing to some known truth.  Since the motivation of the paper is about so many other tools, it would be much more convincing to show a few more different applications (e.g. file system defragmenter).
+
+Third, their implementation appears to be not yet complete.  While they mention F2FS in the abstract, it is not described in Section 3.  Furthermore, their cache study only works with ext3.  It is also disappointing that they perform their classification for ext3 instead of ext4, especially since their motivation is that the ext3 structures are simpler than ext4; if the authors can't annotate the file system that is most popular in Linux, it is hard to say Spiffy is a practical approach.
+
+Smaller comments:
+
+- Subsection on "Address Spaces": You say "For Btrfs, we currently support the raid address space for a single device, which only allows metadata mirroring (raid-1)."
+It will be interesting to know how hard it is to implement new address spaces (e.g. multiple devices in Btrfs).
+
+- Subsection "Runtime Implementation":  You say that dynamically allocated blocks are cached until its type is known (which is the technique used in previous work, though not referenced). And for Ext3 you present a heuristic to avoid the memory pressure resulting from excessive caching; specifically, you try to interpret a block whose type is unknown as either directory block  or indirect block and if it fails you classify it as not-metadata. It will be good if you present such heuristics for Btrfs and F2FS file systems as well. If the number of dynamically typed block types are many, then generating such heuristics could be hard or even infeasible.  Please talk about a strategy to handle the worst case workloads for which the heuristic you use fails and therefore leads to a high memory pressure.
+
+- Evaluation Section 6.2, First paragraph last but one line: "We encountered known problems with SSD caching and Btrfs in our kernel version [9]".   The references is to a blog from Dec 2013 that does not talk about the specific issues. A few lines about the specific issues faced with SSD caching and Btrfs will help.
+
+===========================================================================
+                          EuroSys 2017 Review #7E
+---------------------------------------------------------------------------
+   Paper #7: Spiffy: Interpreting Metadata for File System Applications
+---------------------------------------------------------------------------
+
+                 Reviewer expertise: 3. Knowledgeable
+              How new is the topic?: 4. Advanced topic (Very recent area
+                                        and problem statement)
+How relevant are the results and contributions?:
+                                     3. The paper has new ideas on a known
+                                        problem
+How complete are the results and contributions?:
+                                     3. Paper is fine but needs some more
+                                        work to make its case
+      What is the potential impact?: 2. Paper will have some impact
+
+                         ===== Paper summary =====
+
+Writing file system applications is hard, as it requires a deep understanding of the underlying file system formats. To this end, this paper proposes an annotation-based approach to specifying the on-disk format of a file system, which can be used to generate a library to identify and integrating file system metadata. Developers can then leverage this library to write storage applications. This paper has provided annotations for Ext3, BtrFS and F2FS and developed two applications to showcase the usefulness of the approach, which achieves similar performance of hand-written applications.
+
+                     ===== Comments for authors =====
+
+Using an annotation to ease the development of storage applications is an interesting direction. I appreciate that this paper has done a case study on three file systems. Yet, this paper needs to make a stronger case to demonstrate the practicality and effectiveness of the approach.
+
+- It seems that provide proper annotation requires a deep understanding of a lot of unspoken rules of each file systems. Hence, an imprecise annotation may easily cause the generated problem to contain a number of bugs. Section 3 listed a number of subtle issues to handle when writing annotations.
+What if the annotation is imprecise?
+
+- Another issue is how to maintain the annotations across file system updates. It is possible that an update may break the semantics of the original annotations.
+
+- When motivation this paper, the authors used a number of cases to show the need of providing annotation for file systems. However, the final case studies only include two of them. In the evaluation, only one application is evaluated. This may not be enough to show the usefulness of the annotation.
+
+Section 3.2:  raid -> RAID

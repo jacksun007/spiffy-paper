@@ -1,0 +1,54 @@
+\section{File System Applications\label{sec:File-System-Applications}}
+
+We wrote three file-system aware storage applications using the Spiffy framework: a dump tool; a file system conversion tool; and a prioritized block layer cache. The first two applications operate offline, while the last one is an online application.
+
+\paragraph*{File System Dump Tool}
+
+The file system dump tool parses all the metadata in a file system image and exports the result in an XML format, using file system traversal code similar to the example shown in Figure~\ref{fig:fs-traversal-example}. In addition to \texttt{accept\_pointers}, the entity class provides an \texttt{accept\_fields} method that allows iterating over all fields (not just pointer fields) of the class. Since some file system metadata may not be of interest, the XML writer provides APIs to help filter out irrelevant fields or structures. For example, the Ext4 dump tool excludes any unallocated inode structures from being exported to XML. The tool currently supports Ext3/4, Btrfs, and F2FS.
+
+%% For each file system, a main function initializes an instance of the file system class, the address space translation module, and the XML writer, and then runs file system traversal code similar to the example shown in Figure~\ref{fig:fs-traversal-example}.
+
+\paragraph*{File System Conversion Tool}
+
+Converting an existing file system into a file system of another type is a time-consuming process, involving copying files to another disk, reformatting the disk, and then copying the files back to the new file system. In-place file system conversion that updates file system metadata without necessarily moving file data can speed file system conversion dramatically. Unfortunately, while some such conversion tools exist (e.g., \texttt{convert} utility that converts FAT32 to NTFS \cite{fat-to-ntfs}), they are hard to implement correctly and generally not available.
+
+We have designed an in-place file system conversion tool using the Spiffy framework. Such a conversion tool requires detailed knowledge of the source and the destination file systems, and is thus a challenging application for our approach. In-place conversion involves several steps. First, the file and directory related metadata, such as inodes, extent mappings, and directory entries of the source file system, are parsed into a standard format. Second, the free space in the source file system is tracked. Third, if any source file data occupies blocks that are statically allocated in the destination file system, then those blocks are reallocated to the free space, and the conversion aborted if sufficient free space is not available. Finally, the metadata for the destination file system is created and written to disk. In our current tool, a power failure during the last step would corrupt the source file system. We plan to add failure atomicity in the future.
+
+Our tool currently supports converting extent-based Ext4 file systems to log-structured F2FS file systems. The source file system is read using a custom set of visitors that efficiently traverse the file system and create in-memory copies of relevant metadata. For example, unused block groups can be skipped while processing block group descriptors. Next, we generate the free space list by processing Ext4's block bitmaps, while removing F2FS's static metadata area from the list. Then, Ext4 extents in the F2FS metadata area are relocated to the free space with their mappings updated. Finally, F2FS metadata is created from the in-memory copies and written to disk, which involves allocation and pointer management, requiring significant file-system-specific logic.
+
+Fortunately, various pieces of the code can be reused for different combinations of source and destination file system when adapting new file systems. As an example, only the code to copy Btrfs metadata from an existing file system and to list its free space is required to support the conversion from Btrfs to F2FS, since the in-memory data structures are generic across file systems that support VFS. If the file system does not support VFS, suitable default values can be used, which would be helpful for upgrading from a legacy file system such as FAT32.
+
+\begin{figure}[t]
+\begin{lstlisting}
+class Ext4DirEntry : public Entity {
+  Ext4DirEntry() :
+    inode("inode", "__le32"),
+    ...
+    name("name", "char []", *this) {}
+public:
+  Integer<__le32> inode;
+  Integer<__le16> rec_len;
+  Integer<__u16>  name_len;        
+  Vector<char>    name;
+  ...
+};
+\end{lstlisting}
+\vspace{-12pt}
+\caption{\label{fig:ext3_dirent_library_wrapper}Wrapper class for Ext4 directory
+entry.}
+\vspace{-8pt}
+\end{figure}
+
+\paragraph{Prioritized Block Layer Cache}
+
+We have implemented a file-system aware block layer cache based on Bcache \cite{Bcache2016}. Our cache preferentially caches the files of certain priority users, identified by the \texttt{uid} of the file. This caching policy can dramatically improve workload performance by improving the cache hit rate for prioritized workloads, as shown in previous work~\cite{sw-defined-caching-2015}.  Bcache uses an LRU replacement policy; in our implementation, blocks belonging to priority users are given a second chance and are only evicted if they return to the head of the LRU list without being referenced.
+
+We use a runtime interpretation module, described in more detail in~\ref{sec:Implementation}, to identify metadata blocks at the block layer without any modifications to the file system. We track the data extents that belong to file inodes containing the uid of a priority user, so that we can preferentially cache these extents. For Ext4, we use the \texttt{parse\_by\_type()} function shown in Table~\ref{tab:library-api} and custom visit functions to parse inodes and determine the priority extent nodes. Similarly, we parse the priority extent nodes to determine the priority extent leaves, which contain the priority data extents.
+
+%% For Ext4, we process the extent tree inside an inode with the \texttt{uid}. If the extent tree has multiple levels, we separately track the block address for the extent nodes and leaves so that when we later process an extent leaf, we can add the data extents in the leaf to our list of priority extents.
+
+For Btrfs, the inodes and their file extent items may not be placed close together (e.g., within the same B-tree leaf block), and so parsing an inode object will not provide information about its extents. Fortunately, the key of a file extent item is its associated inode number, making it easy to track the file extents of priority users.
+
+%% Therefore, whenever we come across a file inode belonging to the priority user, we add the inode number to another list so thatwe can identify file extent item that contains priority data extents.
+
+%% The dump tool and the differentiated block layer cache requiring minimal file-system specific code, while the file system conversion tool require knowledge of both the source and destination file system to convert metadata from one format to another.

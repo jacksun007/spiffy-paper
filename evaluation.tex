@@ -1,0 +1,110 @@
+\section{Evaluation\label{sec:Evaluation}}
+
+In this section, we discuss the effort required to annotate the structures
+of existing file systems, the effort required to write Spiffy applications, and then evaluate the performance of our file-system conversion tool and the file-system aware block-layer caching mechanism.
+
+\subsection{Annotation Effort\label{subsec:Annotation-Effort}}
+
+\begin{table}
+\begin{centering}
+\begin{tabular}{|c|c|c|c|}
+\hline 
+File System & Line Count & Annotated & Structures\tabularnewline
+\hline 
+\hline 
+Ext4 & 491 & 113 & 15+10+4\tabularnewline
+\hline 
+Btrfs & 556 & 151 & 27+4+1\tabularnewline
+\hline 
+F2FS & 462 & 127 & 14+16+5\tabularnewline
+\hline 
+\end{tabular}
+\par\end{centering}
+\vspace{-5pt}
+\caption{\label{tab:loc-struct}File system
+structure annotation effort.}
+\vspace{-5pt}
+\end{table}
+
+Table~\ref{tab:loc-struct} shows the effort required to correctly annotate the Ext4, Btrfs and F2FS file systems. The second column shows the number of lines of code of existing on-disk data structures in these file systems. The lines of code count was obtained using \texttt{cloc}~\cite{danial2009cloc} to eliminate comments and empty lines. The third column shows the number of annotation lines. This number is less than one-third of the total line count for all the file systems.
+
+The last column is listed as $A+B+C$, with $A$ showing no modification to the data structure (other than adding annotations), $B$ showing the number of data structures that were added,\footnote{We consider the vector type to be an annotation and not a structure for this calculation.} and $C$ showing the number of data structures that needed to be modified. Structure declarations needed to be added or modified for three reasons:
+%
+\begin{enumerate}[leftmargin=0.15in,itemsep=-0.5ex]
+\item We break down structures that benefit from being declared as conditionally
+inherited types. For example, \texttt{btrfs\_file\_extent\_item}
+is split into two parts: the header and an optional footer, depending on
+whether it contains inline data or extent information for data.
+\item Simple structures such as Ext4 extent metadata blocks, are not declared in
+the original source code. However, for annotation purposes, they need
+to be explicitly declared. All of the added structures in Ext4 belong
+to this category.
+\item Some data structures with a complex or backward-compatible format require 
+modifications to enable proper annotation. For example, Ext4 inode retains its Ext3 definition in the official header file even though the \texttt{i\_block} field now contains extent tree information rather than block pointers. We redefined 
+the Ext4 inode structure and replaced \texttt{i\_block} with the extent header
+followed by four extent entries.
+\end{enumerate}
+
+\subsection{Application Developer Effort\label{subsec:Developer-Effort}}
+
+In this section, we evaluate the effort required to develop Spiffy applications. 
+
+\noindent\textbf{Dump Tool:} The file system dump tool is a simple tool in which the file-system independent XML writer module is written in 482 lines of C++ code, and the main function for each file system is written in 30 to 60 lines of code, depending on the number of structures the programmer wants to skip. The dump tool is helpful for debugging issues with real file systems, and to verify the correctness of the annotations. In particular, an expert can verify that the annotations are correct when the output of the dump tool matches the expected contents of the file system. Therefore, this tool has become an integral tool in our development process.
+
+\noindent\textbf{Conversion Tool:} The Spiffy file system conversion tool framework is written in 504 lines of code. The code for reading Ext4 takes 218 lines, the code to convert to the F2FS file system requires 1760 lines, and the file-system developer code for F2FS, which is reused in other applications such as the dump tool, consists of 383 lines. We also wrote a manual converter tool that uses the \texttt{libext2fs}~\cite{tso-e2fsprogs} library to copy Ext4 metadata from the source file system, and manually writes raw data to create an F2FS file system. The manual converter has 223 lines of Ext4 code, and 2260 lines for the F2FS code. In this case, the two converters have similar number of lines of code, but the Spiffy converter has several other benefits. On the source side, the manual converter takes advantage of the \texttt{libext2fs} library. Changing this code for a different file system would require significant changes, and would require much more code for a file system such as ZFS that does not have a similar user-level library. On the destination side, the main reason that the Spiffy converter requires many file-system specific lines of code is that each newly created object needs to be initialized, and the initialization has to be performed manually. However, Spiffy uses the \texttt{create\_container} and \texttt{save} functions to create and serialize objects in a type-safe manner, and checks constraints on objects, while the manual converter writes raw data, which is error-prone, leading to the types of bugs discussed in \ref{sec:Extended-Motivation}.
+
+\noindent\textbf{Prioritized Cache:} The original Bcache code consisted of 10518 lines of code. To implement prioritized caching we added 289 lines to this code, which invokes our generic runtime metadata interpretation framework, consisting of 2158 lines of code. This framework provides hooks to specify file-system specific policies. Our Ext4-specific policy requires 111 lines of code, and the Btrfs-specific policy requires 134 lines of code. Currently, we have not implemented prioritized caching for F2FS, which would require tracking NAT entries, similar to how we track inode numbers for Btrfs to find their file extents.
+
+\subsection{File System Conversion Performance\label{subsec:fsconvert_performance}}
+
+\begin{table*}
+\begin{centering}
+\begin{tabular}{|c|c|c|c|c|}
+\hline 
+\# of files & 20000 & 5000 & 1000 & 100 \tabularnewline
+%\hline
+%File set size & 16.12GB & 16.27GB & 16.13GB & 16.27GB \tabularnewline
+\hline 
+\hline 
+Copy Convertor & $188.17 \pm 3.65$s & $190.28 \pm 2.15$s & $192.74 \pm 2.28$s & $195.11 \pm 0.18$s \tabularnewline
+\hline 
+Manual Converter & $6.55\pm 0.53$s & $3.46 \pm 0.17$s & $3.29 \pm 0.11$s & $3.25 \pm 0.11$s \tabularnewline
+\hline 
+Spiffy Converter & $7.03 \pm 0.2$s & $4.01 \pm 0.09$s & $3.84 \pm 0.03$s & $3.71 \pm 0.13$s\tabularnewline
+\hline 
+\end{tabular}
+\par\end{centering}
+\vspace{-5pt}
+\caption{\label{tab:fsconvert-result}Time required for each technique to convert 
+from Ext4 to F2FS for different number of files.}
+\vspace{-5pt}
+\end{table*}
+
+We compare the time it takes to perform copy-based conversion, versus using the Spiffy-based and the manually written in-place file-system conversion tools. The results are shown in Table \ref{tab:fsconvert-result}. The experiments are run on an Intel 510 Series SATA SSD.  We create the file set using Filebench 1.5-a3~\cite{wilson2008new} in an Ext4 partition on the SSD, and then convert the partition to F2FS. The 20K file set uses the \texttt{msnfs} file size distribution with the largest file size up to 1GB. The rest of the file sets have progressively fewer small files. All file sets have a total size of 16GB. For the copy converter, we run \texttt{tar -aR} at the root of the SSD partition and save the tar file on a separate local disk. We then reformat the SSD partition and extract the file set back into the partition.
+
+The copy converter requires transferring two full copies of the file set, and so it takes 30 to 50 times longer than using the conversion tools, which only need to move data blocks out of F2FS's static metadata area and then create the corresponding F2FS metadata. Both conversion tools take longer time with  larger filesets since they need to handle the conversion of more file system metadata. The library-assisted conversion tool performs reasonably compared to its manually-written counterpart, with at most a 16.7\% overhead for the added type-safety protection that the library offers. This shows the feasibility of using the library for general use when working with file system metadata. 
+
+%
+% Jack: should we talk about why mount-and-copy does slightly better with more small files?
+%
+
+\subsection{Prioritized Cache Performance\label{subsec:pcache_performance}}
+
+We measure the performance of our prioritized block layer cache (see \ref{sec:File-System-Applications}), and compare it against LRU caching with one or two instances of the same workload.
+
+Our experimental setup includes a client machine connected to a storage server over a 10Gb Ethernet using the iSCSI protocol. The storage server runs Linux 3.11.2 and has 4 Intel Processor E7-4830 CPUs for a total of 32 cores, 256GB of memory and a software RAID-6 volume consisting of 13 Hitachi HDS721010 SATA2 7200 RPM disks. The client machine runs Linux 4.4.0 with Intel Processor E5-2650, and an Intel 510 Series SATA SSD that is used for client-side caching. To mimic the memory-to-cache ratio of real-world storage servers, we limit the memory on the client to 4GB and use 8GB of the SSD for write-back caching. The RAID partition is formatted with either the Ext4 or Btrfs file system and is used as the primary storage device. To avoid any scheduling related effects, the NOOP I/O scheduler is used in all cases for both the caching and primary device.
+
+We use a pair of identical Filebench fileserver workloads to simulate a shared hosting scenario with two users where one requires higher storage performance than the other.
+%We use a pair of fileservers, running on the same machine,
+%with one having cache priority over the other.
+We generate a total file set size of 8GB with an average file size of 128KB, for each workload. The fileserver personality performs a series of create, write, append, read and delete of random files throughout the experiment. Filebench is set to report performance metrics every 60 seconds over a period of 90 minutes. However, since each experiment starts with an empty cache, the performance initially fluctuates. Thus, we present the average of the results from the last 60 minutes of the experiment, after performance stabilizes.
+
+\begin{figure}
+\begin{centering}
+\includegraphics[width=1\columnwidth]{figures/caching-result-stacked}
+\par\end{centering}
+\vspace{-5pt}
+\caption{\label{fig:Performance-of-differentiated}Throughput of prioritized caching over LRU caching with one or two file servers for Ext4 and Btrfs.}
+\end{figure}
+
+Figure \ref{fig:Performance-of-differentiated} shows the average throughput for each of the experiments in operations per second.  The error bars show 95\% confidence intervals.  First, we establish the baseline performance of a single fileserver instance running alone, which has a cache hit ratio of 64\% and 54\% for Ext4 and Btrfs, respectively. Next, we run two instances of fileserver to observe the effect of cache contention. We see a drastic reduction in cache hit ratio to 23\% and 24\% for Ext4 and Btrfs, respectively.  Both fileservers have similar performance, which is between 2.3x and 2.7x less than when running alone. When we apply preferential caching to the files used by fileserver A, however, its throughput improves by 60\% over non-prioritized LRU caching when running concurrently with fileserver B, with the overall cache hit ratio improving to 46\% and 53\% for Ext4 and Btrfs, respectively.  Interestingly, prioritized caching also improves the aggregate throughput of the system by 14\% to 22\%. Giving priority to one of the two jobs implicitly reduces cache contention. These results show that storage applications using our generated library can provide reasonable performance improvements without the need to change the file system code.

@@ -1,0 +1,22 @@
+
+\section{Bugs in File-System Applications\label{sec:Extended-Motivation}}
+
+We motivate this work by presenting various bugs caused by incorrect parsing of file-system metadata in storage applications (outlined in Table~\ref{tab:Bug-reports}). Some of these bugs cause crashes, while others may result in file system corruption. For each bug, we discuss the root cause.% and how our approach can help avoid it.
+
+\begin{enumerate}[leftmargin=0.15in,itemsep=-0.25ex]
+
+\item An extra memory allocation caused uninitialized bytes to be written to the boot jump field of Fat32 file systems during resizing. Since Windows depends on the correctness of this field, the bug rendered the file system unrecognizable by the operating system.
+
+\item NTFS has a complex specification for the size of the MFT record. If the value is positive, it is interpreted as the number of clusters per record. Otherwise, the size of the record is $2^{|value|}$bytes (e.g., $-10$ would mean that the record size is 1024 bytes). The developers of ntfsprogs were unaware of this detail, and so the GParted partition editing tool would fail when attempting
+to resize an NTFS partition.
+
+\item In this version of e2fsck, the file system checker failed to detect corrupted directory entries if the size field of the entries was set to zero, which results in no repair being performed. Ironically, other programs, such as debugfs, ls, and the file system itself, can correctly detect the corruption.
+
+\item Ext2/3/4 inodes contain union fields for storing operating system specific metadata. Unfortunately, a sanity check was omitted in e2fsck prior to accessing this field, causing erroneous repairs to be performed when the creator OS is not Linux. Consequently, the file system becomes corrupted for Hurd and possibly other operating systems.
+
+\item A fuzzer that generates test cases that trigger different internal states of its target binary~\cite{AmericanFuzzyLop} was able to craft corrupted super blocks that would crash the Btrfsck tool. In response, Btrfs developers added 15 extra checks (for a total of 17 checks) to the super block parsing code.
+
+\item When the skinny metadata feature was added to Btrfs, the developers neglected to also patch Btrfsck, resulting in false error reports. This bug shows the difficulty of keeping all relevant applications up-to-date with changing file system formats.
+\end{enumerate}
+
+The common theme among all these bugs is that: 1) they are simple errors that occur because they require a detailed understanding of the file system format; 2) they can cause serious data loss or corruption; and 3) most of these bugs were fixed in less than 5 lines of code. Our domain-specific language allows generating libraries that can automatically sanitize file system metadata by checking various structural constraints before it is accessed in memory. In the presence of corrupted metadata, our libraries generate error codes, rather than crashing the tools, or propagating the corruption further.

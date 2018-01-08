@@ -1,0 +1,119 @@
+%% LyX 2.2.3 created this file.  For more info, see http://www.lyx.org/.
+%% Do not edit unless you really know what you are doing.
+\documentclass[english]{article}
+\usepackage[T1]{fontenc}
+\usepackage[latin9]{inputenc}
+\usepackage{babel}
+\usepackage{listings}
+\renewcommand{\lstlistingname}{Listing}
+
+\begin{document}
+
+\subsection{Example: F2FS}
+
+F2FS is a Linux log-structured file system optimized for NAND flash
+storage devices operating above a generic block interface. The on-disk
+layout is divided into fixed-sized segments which represent the basic
+unit of management in F2FS \cite{lee2015f2fs}. This coarse granularity
+of management requires a corresponding abstraction to allow our annotations
+to be sufficiently expressive. 
+
+Managing the granularity of the annotated metadata structure is succinctly
+captured in the unit parameter for the \texttt{FSSTRUCT} declaration.
+As illustrated in Figure \ref{BROKEN: Ref: fig:F2FS-checkpoin=002026},
+the packs within the checkpoint region contain heterogeneous typed
+metadata blocks that are not necessarily in-place. Figure \ref{fig:Annotated-F2FS-Checkpoint}
+shows the corresponding annotation for the checkpoint region. We define
+macros to resolve external references for the checkpoint start address
+to the corresponding checkpoint pack during parsing. By annotating
+with the \texttt{extent} argument, we ensure that disk accesses for
+a checkpoint pack do not fetch the entire segment.
+
+\begin{figure*}
+\noindent\begin{minipage}[t]{1\textwidth}%
+\begin{lstlisting}[basicstyle={\footnotesize\ttfamily},tabsize=2]
+#define CP_PACK1 (sb.cp_blkaddr) 
+#define CP_PACK2 (sb.cp_blkaddr + (1 << sb.log_blocks_per_seg)) 
+#define CP_START_ADDR ( (self.checkpoint_ver & 1) ? CP_PACK1 : CP_PACK2 ) 
+
+VECTOR(name=f2fs_checkpoint_extent, type=f2fs_checkpoint_segment,         
+		size=SEGMENT_SIZE*sb.segment_count_ckpt, count=2); 
+
+FSSTRUCT(unit=extent, size=SEGMENT_SIZE, name=cp, base=struct f2fs_checkpoint) {
+    /* Orphan Inode Blocks */         
+	POINTER(name=orphan, repr=block, type=f2fs_orphan_blocks, expr=CP_START_ADDR + 1, when=HAS_ORPHANS);
+    
+	...
+
+	/* Data Summary Blocks */         
+	POINTER(name=normal_data_summaries, repr=block, type=normal_data_summary_blocks,                  
+			expr=CP_START_ADDR + self.cp_pack_start_sum);
+ 
+	/* Node Summary Blocks */         
+	POINTER(name=node_summaries, repr=block, type=node_summary_blocks,                  
+			expr=NODE_SUMM_START_ADDR, when=HAS_NODE_SUMM);
+
+    /* Checkpoint Footer */  
+	POINTER(name=footer, repr=block, type=struct f2fs_checkpoint,                  
+		expr=(CP_START_ADDR + self.cp_pack_total_block_count - 1)); 
+
+}; f2fs_checkpoint_segment 
+\end{lstlisting}
+%
+\end{minipage}
+
+\vspace{-3ex}
+\caption{\label{fig:Annotated-F2FS-Checkpoint}Annotated F2FS Checkpoint Region
+showing the use of extents of heterogeneous block structures.}
+\end{figure*}
+
+\begin{figure*}
+\noindent\begin{minipage}[t]{1\textwidth}%
+\begin{lstlisting}[basicstyle={\footnotesize\ttfamily},tabsize=2]
+FSSTRUCT(unit=container, size=BLOCK_SIZE) {     
+	u8 padding[F2FS_NODE_NUM_BYTES];     
+	struct node_footer footer; 
+} f2fs_block;
+
+FSSTRUCT(base=struct f2fs_block, when=self.footer.ino == self.footer.nid) {     
+	POINTER(name=i, repr=offset, type=struct f2fs_inode, expr=0); 
+} inode_block;
+
+FSSTRUCT() f2fs_nat_entry { 	
+	__u8 version; /* latest version of cached nat entry */ 	
+	__le32 ino;		/* inode number */
+
+    POINTER(repr=block, type=struct f2fs_block) 	
+	__le32 block_addr;	/* block address */ 
+} __attribute__((packed));
+
+FSSTRUCT(rank=container, size=BLOCK_SIZE) f2fs_nat_block { 	
+	struct f2fs_nat_entry entries[NAT_ENTRY_PER_BLOCK]; 
+} __attribute__((packed));
+
+VECTOR(name=f2fs_nat_extent, type=struct f2fs_nat_block, size=SEGMENT_SIZE * sb.segment_count_nat); 
+\end{lstlisting}
+%
+\end{minipage}
+
+\vspace{-3ex}
+\caption{\label{fig:nat_structures-1}Annotated F2FS NAT data structures. The
+node footer information is used to infer whether the node block is
+an inode block.}
+\end{figure*}
+
+The Node Address Table (NAT) is used as an indexing structure to locate
+metadata blocks in the main (sequential-write) area and is also composed
+of two NAT packs. Since the first contiguous set of indices within
+a NAT pack correspond to the domain of inode numbers, we constrain
+our parsing of the NAT region to this set of entries so that we only
+traverse \texttt{POINTER} references to inode blocks. Figure \ref{fig:nat_structures-1}
+show the relevant structures for the NAT region. Indirect and double
+indirect blocks are located after parsing the inode block. 
+
+The \texttt{node} address space is introduced to resolve node references
+within the inode block to locate indirect and double indirect blocks.
+This address space translation module provides a convenient mechanism
+to resolve multiple translations for a given node reference (one from
+each NAT pack) and preserves the goal of a tree parsing order.
+\end{document}

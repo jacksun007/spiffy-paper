@@ -1,0 +1,347 @@
+Dear Kuei,
+dear Angela and Ashvin,
+
+first of all, congratulations from my side to your paper and thank you for contacting me that soon. I have just been going again through the reviewers’ comments and fear that all of them are important …
+
+The following concerns from the reviews have been discussed most at the PC meeting and I have tried to group them:
+
+    How difficult is it to build online tools based on Spiffy: “Silent about safety of modifying file system metadata from an application” or “One really hard item for FS metadata is online updating of on-disk format. How does Spiffy reduce complexity here?“ or „It is not clear how online tools relying on Spiffy work together with the page cache and with changes to data structures while a tool updates metadata”
+    Somehow related is the topic safety and correctness: “Experiments evaluating the correctness of the library code and correctness of applications developed on top of the library will be useful“ or  “This also means that errors in file system tools cannot be just circumvented by Spiffy, as the file system specific parts always have to be in-sync with the file system itself.”
+    How much do tool developers have to know about file system internals and how much can Spiffy help: “how would you move a block from location A to B? In ext4, there is at most one file that points to that block. But in btrfs there could be multiple files due to snapshots (more with deduplication).”, “You claim here that you can develop applications that work across file systems. This seems like too strong a claim unless you present a useful application that does this”
+    Are there any major changes to the operating system involved outside the file systems: “Is it mandatory to change the kernel build process to successfully use Spiffy?” 
+
+This can be slightly summarized in the comment “But the PC also feels that the paper overstates its contributions and causes serious confusions. The PC suggests the authors to substantially improve the writing of the paper and clearly explain what the paper actually offers and what it does not (and maybe considers as future work).“ :-)
+
+We do not expect that you solve the issues mentioned here, but it is important for the final acceptance of the paper to clearly discuss the advantages but also the limitations of Spiffy.
+
+Furthermore, I appreciate that you will provide a tool incorporating caching for F2FS, but this is not a requirement. 
+
+Best Regards,
+
+
+André
+
+-----------------------------------------------------------------------------
+
+The 16th USENIX Conference on File and Storage Technologies (FAST '18)
+program committee is delighted to inform you that your paper #24 has been
+accepted to appear in the conference.
+
+       Title: Spiffy: Interpreting Metadata for File System Applications
+     Authors: Kuei Sun (University of Toronto)
+              Daniel Fryer (University of Toronto)
+              Joseph Chu (University of Toronto)
+              Angela Demke Brown (University of Toronto)
+              Ashvin Goel (University of Toronto)
+  Paper site: https://fast18.usenix.hotcrp.com/paper/24?cap=024aNN_IAqnYFCQ
+
+Your paper was one of 23 accepted out of 139 submissions. Congratulations!
+
+Reviews and comments on your paper are appended to this email. The
+submissions site also has the paper's reviews and comments, as well as more
+information about review scores.
+
+Your paper is assigned a shepherd: Andre Brinkmann <brinkman@uni-mainz.de>,
+CC'd on this email. Please contact your shepherd within 24-48 hours to plan
+out the revisions to your paper.  Note that all acceptances are
+conditional, so it is important to follow the shepherd's instructions when
+revising your paper.  You are expected to incorporate the reviewers'
+suggestions to the satisfaction of the shepherd.  Final paper versions are
+due on January 23, 2018.
+
+In addition to giving a presentation about your paper at the conference,
+you are also expected to present a poster on it.
+
+If you need an invitation letter to apply for a visa to attend the
+conference, please contact conference@usenix.org as soon as possible. (Visa
+applications can take at least 30 working days to process.) Please identify
+yourself as a presenter and include your mailing address in your email.
+
+Important dates:
+
+   January 23: Final camera-ready copy due
+   February 12-15: Conference
+
+Please contact FAST18chairs@usenix.org with any questions or concerns.
+
+Again, congratulations!
+
+Sincerely,
+
+Nitin Agrawal
+Raju Rangaswami
+(FAST'18 Program Chairs)
+
+Review #24A
+===========================================================================
+
+Overall merit
+-------------
+3. Weak accept
+
+Reviewer expertise
+------------------
+3. Knowledgeable
+
+Novelty
+-------
+4. New contribution
+
+Validation and Thoroughness
+---------------------------
+3. Adequate
+
+Writing and Presentation Clarity
+--------------------------------
+4. Good
+
+Paper summary
+-------------
+Spiffy provides a library that system application developers can use to access, navigate, and manipulate on-disk file system metadata structures. Spiffy takes annotations added to file system header files and uses them to automatically generate a library that developers can use to identify, navigate, and manipulate things like inodes, directories, and allocation maps.  This setup makes Spiffy somewhat file system independent.
+
+Pros
+    -- Original and potentially useful idea
+    -- Well executed, as far as it goes
+    -- Well written
+
+Cons
+   -- Implies more than it delivers
+   -- Partial solution - feels more like "this is as much as we've been able to do to date" so we're submitting what we have.
+    -- Silent about safety of modifying file system metadata from an application.
+
+I really like the core idea here.  It would be very powerful to have a file system independent way to develop applications to traverse, analyze and manipulate metadata.  And this is what the authors seem to promise: "Our approach simplifies the development of these applications, making it easier to write applications that work across different file systems." [2nd paragraph, abstract]  So I was disappointed that what is delivered is much less --- basically a library for navigating the on-disk metadata structures of a file system --- still requiring file system specific logic in applications to do anything powerful.
+
+That said, it's not entirely surprising that the authors haven't (yet?) been able to deliver on the grand promise here, as the more complex things you want to do, the harder it is to imagine doing them without needing to interpret some file system specific metadata.  E.g., how would you move a block from location A to B? In ext4, there is at most one file that points to that block. But in btrfs there could be multiple files due to snapshots (more with deduplication).
+
+This gets at my primary disappointment here.  What the authors have accomplished seems well done.  But they are sloppy about pitching a grander vision of where this could someday go, and clearly delineating what they have actually built. Assuming that this could be cleaned up in shepherding, that leaves the question of whether the actual contribution here is sufficient for a full-length FAST paper.  After some internal debate, I'm coming down on the accept side.  While this does feel a bit like an extended HotStorage paper, I also could imagine this leading to a lot of interesting discussion.  (e.g., "Is it possible to build a file system independent defragmentation tool?")
+
+Comments for author
+-------------------
+Abstract:  "Application developers must spend significant time learning the format..."  My first reaction to this statement was that usually these developers are the same people who develop the file system, so this isn't a problem (e.g., with defragmentation and checking tools).  But then it occurred to me that maybe a stronger argument here is that *more* tools could be developed if not for this hurdle, which makes it hard for people outside the development team to do this type of work.
+
+Abstract: As I called out above, you claim here that you can develop applications that work across file systems.  This seems like too strong a claim unless you present a useful application that does this.  The file system dump tool in Section 4 might seem to live up to this, but from what I can tell from Fig 6, all that does is iterate over metadata structures printing the name of each one.  This is useful for demonstrating how Spiffy works. But it is hard to see how this would actually be useful without file system specific code to interpret the contents of those structures.
+
+Table 1:  Some of the values in the "Category" column seem arbitrary.  Are there examples of online file system conversion tools (labeled "either")?  I can imagine building such a thing, but I don't know of examples.  And if you want to consider what an informed file system nerd can imagine, then it seems you could have online metadata dump tools and file system checkers, as well.  (In fact, UFS2 in BSD has a semi-online checker---it works by taking a snapshot and checking that.)
+
+Intro, p. 2 "Our approach enables file system developers to specify..."  This would be a good place to spell out more clearly what you do and don't do.  Given the promises of the abstract, I kind of assumed that when you talk about "parsing" metadata, you meant understanding more than just the internal pointers from one structure to the next.  Rereading the intro, I can see that you carefully don't claim more than you do. But it might help avoid my confusion by being equally specific about what you don't do, and what will still require file system specific code to handle.
+
+Section 3: "The purpose [of Spiffy] is to enable safe interpretation of file system structures... without requiring file system specific code."   I don't understand what you mean by "safe" in this context.  What are you protecting against? Everyone (or at least everyone in the file system world :-) knows that application modification of file system metadata can be dangerous.  So for me this planted the idea that maybe you have some cleverness to protect against bad modifications.  But apparently this isn't the case.  There is no harm in not solving this problem --- Spiffy is certainly no more dangerous than any other way of writing user-level tools that do this. But since I didn't see some other type of "safety" that you might be providing, this confused me and (briefly) made me think maybe you were doing more than you actually are.
+
+Section 3, 2nd paragraph.  "the application may still require file-system specific code."  I think this is the first time you say this explicitly. You should explain this earlier.
+
+p 4, just before Section 3.1:  "When format changes do occur, the specifications need to be updated, which is easier than modifying all the related tools."  Given that tools are likely to require file system specific code, will they need to change anyway?  Maybe there are fewer changes to make?  An interesting test would be to take a tool you have developed and see how easy it is to run it on (much?) earlier versions of the same file system --- i.e., versions that may have format differences.
+
+p. 9 "Runtime Interpretation"  Since you specifically call this "interpretation" can the reader assume that you don't support runtime modification of metadata structures?  That seems like a fine restriction (and something that would make your life much easier).
+
+Related Work.  A possible item of related work is the BSD implementation of LFS (Margo Seltzer, et al, "An implementation of a log-structured file system for UNIX" 1993 Winter USENIX).  They moved the LFS cleaner to user level and provided interfaces to allow it to access and manipulate the required metadata.  This is a different approach than the Spiffy library. One of the LFS techniques---representing all the inodes in a file that can be read by user level applications---has been copied by other file systems, such as WAFL (Hitz, et al., "File system design for an NFS file server appliance", 1994 Winter USENIX).
+
+
+* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+
+Review #24B
+===========================================================================
+
+Overall merit
+-------------
+2. Weak reject
+
+Reviewer expertise
+------------------
+3. Knowledgeable
+
+Novelty
+-------
+3. Incremental improvement
+
+Validation and Thoroughness
+---------------------------
+2. Needs improvement
+
+Writing and Presentation Clarity
+--------------------------------
+4. Good
+
+Paper summary
+-------------
+This paper introduces Spiffy, which provides an annotation language for FSs to specify their on-disk format.  By annotating existing FS data structure code, Spiffy can generate (mostly) generic code to work with the data structures.  The goal is to reduce bugs in each FS in code that must access FS-specific data structures as well as make it much easier to write tools and features that need access to FS-specific data structures.
+
+The authors annotate 3 FSs (ext4, fsf2, btrfs) and implement 3 tools (caching, conversion, dump) on the FSs.  Evaluation is performed with their prototype to demonstrate both the value of using Spiffy but also that it does not incur significant overhead.
+
+Comments for author
+-------------------
+This paper was quite easy to read and I applaud the authors high level goals of making FSs easier to maintain and for which to create new tools.  I truly believe that the problem they are tackling is real, as most of the awesome things FSs can do comes from directly manipulating the FS metadata and yet this is the most complicated part of the implementation.
+
+This paper though didn’t solve the problem that I thought they were going to solve.  My hope was that this work could help new file system developers use a well thought through framework or API that they can build their FS and avoid the bugs mentioned in Table 2 in both the fs metadata code and the tools that manipulate it.  Or maybe convert existing FSs into a form that is easier to work with and less error prone.  I have heard many stories where inode variables that were not typed or named properly were corrupted…as forcing developers to make use of effective types only happens after a FS matures.
+
+Instead, the authors manually annotate existing FSs (through a painstaking process that they don’t describe very well) such that some code is generated to help manipulate the metadata.  After this, it still requires over a 100 LOC per FS for FS specific manipulation.  I’m not convinced this is that beneficial outside of the lab. For example, the annotations must be kept continually maintained and are subject to errors themselves, the generated code may have issues, and the new FS-specific code may have issues. It is not clear after this that while Spiffy may help ease the ability to create new FS tools, the paper doesn’t necessarily show that it reduces the potential for bugs.  The evaluation, while effective at showing what it takes to use Spiffy, doesn’t really help demonstrate the potential to reduce bugs.
+
+The real challenge here is to attain the author’s goals while not adding in additional complexity, which I’m not sure the authors did in this paper.  I definitely would have liked to see a discussion around how a FS developer could create generic metadata structures from scratch to help avoid bugs and to make their traversal/manipulation more generic.
+
+Additional details:
+ - One really hard item for FS metadata is online updating of on-disk format.  How does Spiffy reduce complexity here?
+ - I am a little surprised that in Figure 7, and the generated code, that standard objects such as an inode are not given their own type.
+ - I am still not clear on how synchronization is done in Spiffy to avoid corruption of the metadata.  Is this all manual by the developer?
+ - On metadata granularity, its sometimes advantageous to reading multiple blocks (e.g., read in multiple contiguous inodes during search) and sometimes it isn’t (e.g., reading a single node).  A FS specific tool would know this and choose its granularity appropriately. Could this be done?
+ - Fs convert seems a bit contrived given that its easier to just copy to the new fs… (how often is a FS converted?). I think updating the fs on-disk format would be more interesting in this space…. But I get the point that it makes what was almost impossible due to the complex knowledge of 2 FSs now a relatively easy task.
+ - In the conversion tool, I appreciate that the code size for Spiffy was less than doing it manually, but its disappointing that the tool still requires so much FS-specific code and use of fs specific libraries.  I  hoped that the amount of FS-specific code would have been much less…given that a thousand lines of code still opens up many possibilities for bugs.  It also brings up the question of the percentage of issues that Spiffy really solves.
+ - I would argue that Table 5 should have used a bigger dataset…as any experiment that only takes 3 seconds is somewhat problematic in what it shows.
+
+
+* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+
+Review #24C
+===========================================================================
+
+Overall merit
+-------------
+3. Weak accept
+
+Reviewer expertise
+------------------
+3. Knowledgeable
+
+Novelty
+-------
+4. New contribution
+
+Validation and Thoroughness
+---------------------------
+3. Adequate
+
+Writing and Presentation Clarity
+--------------------------------
+4. Good
+
+Paper summary
+-------------
+Writing storage applications for a file-system (like file system checker) demands a detailed knowledge of various on-disk structures of a file system and their format. The authors motivate that in addition to increasing the burden on application  developers, the manual understanding process is often error prone. To this end, the authors propose Spiffy, an annotation language for file-system developers to specify on-disk format of file-system data structures. Spiffy uses these annotations and (automatically) generates a library consisting of file system meta data parsing and traversal code; application developers use these library functions to rapidly develop robust applications. The authors annotate three file systems (ext4, btrfs, and f2fs) and develop three applications that work with some of these file systems (a straight-forward dump tool, a file system conversion tool between ext4 and f2fs, and prioritized caching for ext4 and btrfs).
+
+Comments for author
+-------------------
+The paper proposes an interesting idea. It is a tedious task to understand, parse, and traverse the on-disk file-system image. The proposal of annotating the file system code by file-system developers and automatically generating a library to ease effort for application developers seems appropriate and interesting. In general, the library (if made publicly available) will be valuable to the file system community, application developers, and learners alike.
+
+The paper is well-written and well-executed. The motivation is particularly convincing; the
+example bugs in section 2 sold the work very well.
+
+It is impressive that the authors have written annotations for three file systems and developed three applications for each of these file systems.
+
+However, here is my major concern about the paper: Given that the main motivation behind the paper is storage applications being buggy due to incorrect traversal/parsing of on-disk structures, I was surprised by the lack of reliability and correctness experiments in the evaluation. The authors only show that applications developed using Spiffy perform well. Experiments evaluating the correctness of the library code and correctness of applications developed on top of the library will be useful.   They really do need to show that their conversion tool leads to correct results for a wide variety of input file systems.  Would Spiffy eliminate the bugs described in Section 2 of the paper?
+
+On a related note, I find it worrisome that their current file system conversion tool does not contain any failure atomicity: a crash when the file system is being written to disk will corrupt the source file system.  This is not acceptable!
+
+I think the case studies could reveal a bit more information.  Could they use their dump tool to find any interesting statistics about current file system images (e.g., amount of meta-data across file systems)?    The case studies would also be more impressive if they could convert more than just ext4 to btrfs.
+
+Finally, how much effort does this framework actually save for the application develop
+ers?  As the authors point out, the application writer still needs to know many file system specifics to implement the application logic.  The implementation of the file system conversion tool also suggest that the LOCs are not greatly reduced.  It would be much better if the authors could quantify how much (and which) file system specific knowledge Spiffy has freed the developers from understanding, and how much knowledge is still required for building storage applications.
+
+Smaller comments:
+"Memory need for mapping table and challenges in taming it" is discussed in the last paragraph under the "Runtime Interpretation" portion of Section 5. Given that the solution introduces memory overheads, it would be useful to know the mapping table overhead for the prioritized cache experiment in Section 6.4. Also a line or two about what the memory needs would be for a future application that absolutely needs correctness.
+
+It might be a good idea to add a line or two about why new structures needed to be added in Btrfs and F2FS in list item 2 in Section 6.1 titled "Annotation effort"
+
+
+* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+
+Review #24D
+===========================================================================
+
+Overall merit
+-------------
+3. Weak accept
+
+Reviewer expertise
+------------------
+3. Knowledgeable
+
+Novelty
+-------
+4. New contribution
+
+Validation and Thoroughness
+---------------------------
+3. Adequate
+
+Writing and Presentation Clarity
+--------------------------------
+3. Adequate
+
+Paper summary
+-------------
+File systems provide a convenient interface for users to read or write data to files, but do not offer standardized ways to access the underlying metadata structures, like inode-tables or the superblock. Instead, developers of file system tools have to know exactly the data structures used in specific file systems to develop repair tools like fsck or defragmentation tools. Subtle changes to the data structures can produce difficult to fix file system errors if the tool development is not in sync with the file system development.
+
+The authors of the paper “Spiffy: Enabling File-System Aware Storage Applications” have developed an API, which helps programmers to develop tools, which are file system agnostic or where only small parts of the tool have to be adapted to the backend file system. The key idea is to annotate pointers to specify the relationships between file system structures. The annotation allows developers to perform selective traversals through the file system’s data structures using type introspection, e.g., to find and operate on directory entries.
+
+File system developers therefore have to annotate their file system implementation, while Spiffy uses these annotations to parse the structures and to generate a library providing file system specific interpretation routines. Additionally, it seems that the file system developer has to implement read(), write(), and alloc() methods for the Spiffy-library. The tool developer can then use this library to traverse the data structure. The paper’s authors have annotated EXT4, Btrfs and F2FS and have developed tools, which are dumping the file system state, are able to convert between file systems, and which provide a prioritized block cache layer.
+
+Comments for author
+-------------------
+Good news concerning the approach is that it seems relatively easy to annotate the file system data structures, as only few lines in the data structures’ header files have to be touched.  Also, the implementations of the dumping tool and of the prioritized cache only include small file system dependent parts, so that they can be generalized to many file systems. Nevertheless, all tools include file system dependent parts and it is clear that a programmer has to understand the underlying data structures to successfully adapt and update tools.
+
+This also means that errors in file system tools cannot be just circumvented by Spiffy, as the file system specific parts always have to be in-sync with the file system itself. This might be even one of the dangers in using Spiffy, as file system tools are currently mostly provided by the file system developers themselves and which are therefore bundled with the file system. If a tool is file system agnostic, it can therefore take time between releasing a new file system version and the update of the Spiffy-based tool.
+
+Therefore, the success of Spiffy depends on the willingness of the file system developers not only to update their header files, but also to adapt all file system dependent parts of all tools being based on Spiffy …
+
+The second example of converting file systems also shows that complex tasks still require huge manual efforts to adapt the tools to specific file systems, which again depend on version specific parts.
+
+Additional comments:
+
+- An appendix is not part of the submission
+- It is not clear how online tools relying on Spiffy work together with the page cache and with changes to data structures while a tool updates metadata -- I personally expect very difficult to find race conditions
+- What exactly means the sentence: “Supporting applications that write blocks, such as IO shepherding [13], will require an IO manager that can make its own IO requests.”  -- Is this difficult? (see previous item)
+- Why have the authors not implemented the prioritized cache for F2FS if it only requires very few lines of code?
+- “We linked our generated library into the Linux kernel by porting some C++ standard containers and integrating the GNU g++ compiler into the kernel build process.” – Is it mandatory to change the kernel build process to successfully use Spiffy?
+
+The strength of the paper is that it provides a general tool which is able to identify commonalities between file systems, while it is not able to really abstract from file system specific knowledge.
+
+
+* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+
+Review #24E
+===========================================================================
+
+Overall merit
+-------------
+3. Weak accept
+
+Reviewer expertise
+------------------
+2. Some familiarity
+
+Novelty
+-------
+4. New contribution
+
+Validation and Thoroughness
+---------------------------
+2. Needs improvement
+
+Writing and Presentation Clarity
+--------------------------------
+4. Good
+
+Paper summary
+-------------
+This paper presents Spiffy, a framework for annotating the data structures of a file system and facilitating the development of file system tools such as defragmentation, consistency checking, and data recovery. Traditionally, it has been difficult to build such tools because of the diversity of file systems and the lack of documentation on file system format. Spiffy addresses this problem by providing a language to annotate data structures in file system code, a tool chain for parsing the annotations and extracting the file system format, and an API for developing file system tools using the extracted knowledge. The paper also presents the results from annotating several mainstream file systems and building several tools using Spiffy.
+
+Comments for author
+-------------------
+The paper studies an important problem. It is generally well written. The implementation seems to be solid.
+
+My main concern with the paper is whether Spiffy would really solve the problem that it seeks to address. If file system developers don't use it, for the same reason that they don't provide good documentation of their file system format, then Spiffy couldn't really help. The amount of annotation effort reported by the paper seems to be small and is encouraging. But more evidence, for example, success stories of such tools from other areas, would make it more convincing.
+
+Second, while the paper presents and evaluates several interesting tools built using Spiffy, I was hoping to see a good comparison with some of the popular existing tools such as fsck, which would allow me to examine the performance and correctness of Spiffy-enabled tools. Unfortunately, there is no such comparison in the paper. The only baseline considered in the paper is a naive approach to converting between file systems, which is not really strong.
+
+Finally, there are some minor typos and grammatical errors in the paper, which requires just more careful editing.
+
+
+Comments
+===========================================================================
+
+Comment @A1
+===========================================================================
+The PC likes that this paper provides a solid first step towards an important research direction, and recommends accepting the paper. But the PC also feels that the paper overstates its contributions and causes serious confusions. The PC suggests the authors to substantially improve the writing of the paper and clearly explain what the paper actually offers and what it does not (and maybe considers as future work).
+

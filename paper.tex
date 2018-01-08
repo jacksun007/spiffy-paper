@@ -1,0 +1,87 @@
+% This version uses the latex2e styles, not the very ancient 2.09 stuff.
+\documentclass[letterpaper,twocolumn,10pt]{article}
+\usepackage{usenix,epsfig,endnotes}
+\usepackage[english]{babel}
+\usepackage[bookmarks=true,pdfborder={0 0 0}]{hyperref}
+\usepackage{url}
+\usepackage[T1]{fontenc}
+\usepackage[latin9]{inputenc}
+\usepackage{color}
+\usepackage{array}
+\usepackage{textcomp}
+\usepackage{multirow}
+\usepackage{amsmath}
+\usepackage{amsthm}
+\usepackage{graphicx}
+\usepackage{makecell}
+\usepackage{enumitem}
+
+%\usepackage{titlesec}
+
+\makeatletter
+\providecommand{\tabularnewline}{\\}
+\date{}
+
+\renewcommand{\dblfloatpagefraction}{0.95}
+\renewcommand{\floatpagefraction}{0.95}
+
+% (jsun): this adds the section symbol in front of section references 
+\renewcommand*{\p@section}{\S\,}
+\renewcommand*{\p@subsection}{\S\,}
+
+\setlength{\belowcaptionskip}{-1ex}
+\usepackage{listings}
+\lstset{
+    basicstyle=\small\ttfamily,
+    tabsize=2,
+    columns=fullflexible,
+    keepspaces=true,
+    language=c
+}
+
+\renewcommand{\paragraph}{%
+  \@startsection{paragraph}{4}%
+  {\z@}{1ex \@plus 1ex \@minus .2ex}{-1em}%
+  {\normalfont\normalsize\bfseries}%
+}
+
+\makeatother
+\usepackage{listings}
+\renewcommand{\lstlistingname}{Listing}
+
+\begin{document}
+\title{\Large \bf Spiffy: Enabling File-System Aware Storage Applications}
+\author{}
+\maketitle
+
+\begin{abstract}
+Many file-system applications such as defragmentation tools, file system checkers or data recovery tools, operate at the storage layer. Today, writing these storage applications requires detailed knowledge of the file-system format. Application developers must spend significant time learning the format, often by trial and error, due to insufficient documentation or specification of the format. Furthermore, these applications perform ad-hoc processing of the file-system metadata, leading to bugs and vulnerabilities.
+
+We propose Spiffy, an annotation language for specifying the on-disk format of a file system. File-system developers annotate the data structures of a file system, and we use these annotations to generate a library that allows identifying, parsing and traversing file-system metadata, providing support for both offline and online storage applications. Our approach simplifies the development of these applications, making it easier to write applications that work across different file systems. We have written annotations for the Linux Ext4, Btrfs and F2FS file systems. We have developed three applications that work for these file systems, an offline file system dump tool, a file system converter, and an online storage layer cache that preferentially caches files for certain users. 
+Our experiments show that applications that use the library to access file system metadata can achieve good performance.
+% (jsun): this statement seems inaccurate because only fs conversion tool is compared
+% against existing implementation
+%Our experiments show that these applications can achieve performance similar to existing implementations.
+\end{abstract}
+
+\input{introduction.tex}
+\input{motivation.tex}
+\input{approach.tex}
+\input{applications.tex}
+\input{implementation.tex}
+\input{evaluation.tex}
+\input{related_work.tex}
+
+\section{Conclusion\label{sec:Conclusion}}
+
+Spiffy is an annotation language for specifying the on-disk file system data structures. File system developers annotate their data structures using Spiffy, which enables generating a library that allows parsing and traversing file system data structures correctly.
+
+%We have demonstrated the simplicity and expressiveness of the language, and 
+We have shown the generality of our approach by annotating three vastly different file systems. The annotated file system code serves as a detailed documentation for the metadata structures and the relationships between them. File-system aware storage applications can use the Spiffy libraries to improve their resilience against parsing bugs, and to reduce the overall programming effort needed for supporting file-system specific logic in these applications. Our evaluation suggests that applications using the generated libraries perform reasonably well. Overall, we believe our approach will enable interesting applications that require an understanding of storage structures.
+
+{\footnotesize \bibliographystyle{acm}
+\bibliography{bibliography}}
+\input{language.tex}
+
+\end{document}
+

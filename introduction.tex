@@ -1,0 +1,114 @@
+\section{Introduction\label{sec:Introduction}}
+
+There are many file-system aware storage applications that bypass the virtual file system interface and operate directly on the file system image. These applications require a detailed understanding of the format of a file system, including the ability to identify, parse and traverse file system structures. These applications can operate in an offline or online context, as shown in Table~\ref{tab:storage_app_taxonomy}. Examples of offline tools include a file system checker that traverses the file system image to check the consistency of its metadata~\cite{Ma2013}, and a data recovery tool that helps recover deleted files~\cite{buckeye2006recovering}.
+
+\begin{table}
+\centering{}{\small{}}%
+\begin{tabular}{|>{\raggedright}p{0.5\columnwidth}|c|c|}
+\hline 
+\multicolumn{1}{|c|}{\textbf{\small{}Storage Applications}} & \textbf{\small{}Category} & \textbf{\small{}Purpose}\tabularnewline
+\hline 
+{\small{}Differentiated services}~\cite{Mesnier2011}  & {\small{}online} & \multirow{2}{*}{{\small{}performance}}\tabularnewline
+\cline{1-2} 
+{\small{}Defragmentation tool} & {\small{}either} & \tabularnewline
+\hline 
+{\small{}File system checker~\cite{Gunawi08b}} & {\small{}offline} & \multirow{4}{*}{{\small{}reliability}}\tabularnewline
+\cline{1-2} 
+{\small{}Data recovery tool~}\cite{buckeye2006recovering} & {\small{}either} & \tabularnewline
+\cline{1-2} 
+{\small{}IO shepherding}~\cite{Gunawi07}  & {\small{}online} & \tabularnewline
+\cline{1-2} 
+{\small{}Runtime verification}~\cite{Fryer2012b} & {\small{}online} & \tabularnewline
+\hline 
+{\small{}File system conversion tool} & {\small{}either} & \multirow{2}{*}{{\small{}administrative}}\tabularnewline
+\cline{1-2} 
+{\small{}Partition editor~\cite{gedak2012manage}} & {\small{}offline} & \tabularnewline
+\hline 
+{\small{}Type-specific corruption~\cite{bairavasundaram2008analyzing}} & {\small{}either} & \multirow{2}{*}{{\small{}debugging}}\tabularnewline
+\cline{1-2} 
+{\small{}Metadata dump tool} & {\small{}offline} & \tabularnewline
+\hline 
+\end{tabular}
+\vspace{-7pt}
+\caption{\label{tab:storage_app_taxonomy}Examples of file-system aware storage applications. Offline applications have exclusive access to the file system; online applications operate while the file system is in use.}
+\vspace{-10pt}
+\end{table}
+
+Online storage applications need to understand the file-system semantics of blocks as they are accessed at runtime. For example, whether the block is a data or a metadata block, whether it belongs to a specific type of file, etc. These applications help improve the performance or reliability of a storage system by performing file-system specific processing at the storage layer. For example, differentiated storage services~\cite{Mesnier2011} improve performance by preferentially caching blocks that contain file-system metadata or the data of small files. I/O shepherding~\cite{Gunawi07} improves reliability by using file structure information to implement checksumming and replication.  Similarly, the Recon system~\cite{Fryer2012b} improves reliability by verifying the correctness of file-system metadata operations at the storage layer.
+
+Today, developers of these storage applications perform ad-hoc processing of file system metadata because most file systems do not provide the requisite library code. Even when such library code exists, its interface may not be usable by all storage applications. For example, the libext2fs library only supports offline interpretation of a Linux Ext3/4 file system partition; it does not support online use. Furthermore, the libraries of different file systems, even when they exist, do not provide similar interfaces. As a result, these storage applications have to be developed from scratch, or significantly rewritten for each file system, impeding the adoption of new file systems or new file-system functionality.
+
+To make matters worse, many file systems do not provide detailed and up-to-date documentation of their metadata format. The ad-hoc processing performed by these storage applications is thus error-prone and can lead to system instability, security vulnerability, and data corruption~\cite{bangert2014nail}.  For example, \texttt{fsck} can sometimes further corrupt a file system~\cite{yang2006using}. Some storage applications reduce the amount of file-system specific code in their implementation by modifying their target file system and operating system~\cite{Mesnier2011,Gunawi07}. However, this approach only works for specific file systems, and it can introduce its own set of bugs. It also requires using custom system software, which may be impractical in virtual machine and cloud environments.
+
+Our aim is to reduce the burden of developing file-system aware storage applications. Our approach enables file system developers to specify the format of their file system using a domain-specific language so that the file system metadata can be identified, parsed and traversed correctly and automatically. Application developers can thus focus on the logic of their applications, and write file-system specific policies more easily.
+%For example, these policies might cache or replicate specific types of metadata or file data.
+This separation of the development of applications from the specification and interpretation of file system formats simplifies the process of building these applications, or adapting them for new file systems.
+
+We introduce Spiffy,\footnote{\textbf{Sp}ecifying and \textbf{I}nterpreting the \textbf{F}ormat of \textbf{F}iles\textbf{y}stems} a language for annotating file system data structures defined in the C language. The annotations augment existing data structure definitions, so that the relationships between file system structures can be explicitly and concisely stated. Spiffy allows file system developers to unambiguously specify the \emph{physical} layout of the file system. We compile the annotated source code to produce a library that enables type-safe parsing and traversal of file system metadata, both for offline or online applications. The generic interfaces provided by the library simplify the development of file-system aware applications, making it easier to write applications that work across different file systems.
+
+% The complexity of modern file systems~\cite{Lu2013} raises several challenges for our specification-based approach. There are many aspects of file system structures and their relationships that are not captured by their declarations in header files. First, an on-disk pointer in a file-system structure may be implicitly specified as an integer, as shown below. The naming convention suggests that this field is a pointer, but that fact cannot be deduced from the structure definition; it requires higher-level knowledge from the application programmer.
+
+% \begin{lstlisting}
+% struct foo { 
+% 	__le32 bar_block_ptr; 
+% };
+% \end{lstlisting}
+
+% Second, the interpretation of file system structures can depend on other structures. For example, the size of an inode structure in a Linux Ext3/4 file system is stored in a field within the super block that must be accessed to correctly interpret an inode block. Similarly, many structures are variable sized, with the size information being stored in other structures. Third, the semantics of metadata fields may be context-sensitive. For example, pointers inside an F2FS inode structure can refer to either directory blocks or data blocks, depending on the type of the inode. Fourth, the placement of structures on disk may be implicit in the code that operates on them (e.g., an instance of structure B optionally follows structure A) and some structures may not be declared at all (e.g., treating a buffer as an array of ints). Finally, metadata interpretation must be performed efficiently, but it is impractical to load all file-system metadata into memory for large file systems. These challenges are not addressed by existing specification tools, as discussed in~\ref{sec:Related_Work}.
+
+% In Spiffy, the key to specifying the relationships between file system structures is a pointer annotation that specifies that a field holds an address to a data structure on physical storage. Pointers have an address space type that indicates how the address should be mapped to the physical location. In the \texttt{struct foo} example above, this annotation would help clarify that \texttt{bar\_block\_ptr} holds an address to a structure of type \texttt{bar}, and its address space type is a (little-endian) block pointer. We expose cross-structure dependencies by using a name resolution mechanism that allows annotations to name the necessary structures unambiguously, and by using a dependency tracking mechanism that ensures that the referenced structures are valid. We handle context-sensitive fields and structures by providing support for conditional types and conditionally inherited structures. We also provide support for specifying implicit fields that are computed at runtime. Last, annotations can specify the granularity at which the structures should be accessed from storage, allowing data to be accessed efficiently, and reducing the memory footprint of the applications.
+
+The central challenge of our specification-based approach is that there are many aspects of file system structures and their relationships that are not captured by their declarations in C header files. Although the headers of a file system contain the structural definitions for various metadata types, they are incomplete descriptions of the file system format because crucial information is embedded within the file system code. 
+% We address this through a combination of annotations and a file-system specific library API which are designed to overcome these limitations, providing the information that is necessary for correct interpretation and traversal of these structures.
+
+We identify six specific types of information missing from the C declarations of file system data structures, which are supplemented by annotations.
+
+\noindent\textbf{File System Pointers} have integer types instead of pointer types, and the mapping between their value and the referenced content (e.g. block address, byte address, or file offset) must be specified.
+
+\noindent\textbf{Cross-Structure Dependencies} affect the interpretation of a dependent metadata block. For example, the size of an inode for the Ext4 file system is stored in a field within the super block that must be accessed to correctly interpret an inode block.
+
+\noindent\textbf{Context-Sensitive Types} are fields or data structures that can be of more than one type. For example, pointers inside an F2FS inode structure can refer to either directory blocks or data blocks.
+
+\noindent\textbf{Computed Fields} represent computations performed by a file system on the physical fields of a structure. For instance, converting a size field from logarithmic to integer representation, or an implicit pointer to a following optional structure.
+
+\noindent\textbf{Metadata Granularity} determines how file system structures relate to underlying I/O requests.
+
+\noindent\textbf{Constraint Checks} define sanity checks to any structure, which are useful for detecting corruption to avoid operating on bad data.
+
+We expand on how Spiffy addresses each of these points in~\ref{subsec:Annotation-Design}. Existing specification tools do not handle all of these concerns, as discussed in~\ref{sec:Related_Work}.
+
+Our annotation strategy makes two assumptions about file systems. We assume that the interpretation of a piece of file system metadata does not depend on the interpretation of children reached by traversing that same metadata. We also assume that any context-sensitive interpretations can be performed by a function or expression free of side effects.
+
+We have annotated three file systems, 1) Ext4, an update-in-place file system, 2) Btrfs, a copy-on-write file system, and 3) F2FS, a log-structured file system~\cite{lee2015f2fs}. We have implemented three applications that are designed to work across file systems, a file system dump tool, a file system converter, and a storage layer service that preferentially caches data for specific users.
+
+\begin{table*}[th!]
+\centering{}%
+\begin{tabular}{|c|l|l|l|c|}
+\cline{2-5} 
+\multicolumn{1}{c|}{} & \multicolumn{1}{c|}{\textbf{\small{}Tool}} & \multicolumn{1}{c|}{\textbf{\small{}FS}} & \multicolumn{1}{c|}{\textbf{\small{}Bug Title}} & \textbf{\small{}Closed}\tabularnewline
+\hline 
+% (jsun): bug\#22266: jump instruction and boot code is corrupted with
+{\small{}1} & {\small{}libparted} & {\small{}Fat32} & {\small{}\#22266: jump instruction and boot code corrupted with
+random bytes after fat is resized} & {\small{}2016-05}\tabularnewline
+\hline 
+{\small{}2} & {\small{}ntfsprogs} & {\small{}NTFS} & {\small{}Bug 723343 - Negative Number of Free Clusters in NTFS Not
+Properly Interpreted} & {\small{}2014-02}\tabularnewline
+\hline 
+{\small{}3} & {\small{}e2fsck} & {\small{}Ext4} & {\small{}\#781110 e2fsprogs: e2fsck does not detect corruption} & {\small{}2016-05}\tabularnewline
+\hline 
+4 & {\small{}e2fsck} & {\small{}Ext4} & {\small{}\#760275 e2fsprogs: e2fsck corrupts Hurd filesystems} & {\small{}2015-05}\tabularnewline
+\hline 
+5 & {\small{}btrfsck} & {\small{}Btrfs} & {\small{}Bug 104141 - Malformed input causing crash / floating point
+exception in btrfsck} & {\small{}2015-10}\tabularnewline
+\hline 
+6 & {\small{}btrfsck} & {\small{}Btrfs} & {\small{}Bug 59541 - Btrfsck reports free space cache errors when
+using skinny extents} & {\small{}2013-06}\tabularnewline
+\hline 
+\end{tabular}
+\vspace{-5pt}
+\caption{\label{tab:Bug-reports}Bugs due to incorrect parsing of file system
+formats.}
+\vspace{-5pt}
+\end{table*}
+
+The rest of the paper is organized as follows. In \ref{sec:Extended-Motivation}, we motivate the need for our approach. \ref{sec:Approach} presents the core concepts that led to the design of the annotation language and the library API. \ref{sec:File-System-Applications} describes the applications that we have implemented using the generated library. \ref{sec:Implementation} describes the implementation of our system, and \ref{sec:Evaluation} assesses the programming effort needed to annotate each file system and the performance of our applications. We present related work in \ref{sec:Related_Work} and discuss our conclusions in \ref{sec:Conclusion}.  For reference, Appendix~\ref{sec:Annotation_Language} shows our file system annotation language with examples of annotated structures for the Ext4, Btrfs and F2FS file systems. 
