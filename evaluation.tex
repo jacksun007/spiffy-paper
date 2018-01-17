@@ -70,7 +70,12 @@ instance of a specified type (e.g., one of the inode structures). The field
 is either corrupted to a random value or zero.
 
 The Spiffy dump tool was able to generate correctly formatted XML files in the 
-face of arbitrary single-field corruptions. dumpe2fs (dump tool for Ext4) 
+face of arbitrary single-field corruptions. When corruption is detected during
+the parsing of a container or pointer fetch (i.e., pointer address out-of-bound 
+or fails placement constraint), an error is printed and the program stops the
+traversal process. 
+
+dumpe2fs (dump tool for Ext4) 
 and btrfs-debug-tree were also able terminate gracefully when attempting to
 parse the same corrupted image. However, we recorded dump.f2fs 10 instances
 of abnormal program termination, including assertion errors and segmentation
