@@ -10,7 +10,7 @@ The compiler generates the file system's internal representation in a symbol tab
 
 Spiffy's backend generates a file-system specific metadata library using Jinja2~\cite{ronacher2011jinja2}.
 %%a templating engine that is typically used for generating dynamic HTML content. The code generator works by processing template filters and tags in the source template files, and the output of the compiler is a pair of C++11 source and header files that can be used by applications. Our system can be compiled as either a user space library or a Linux kernel module. 
-The library can be compiled as either a user space library or as part of a Linux kernel module. We linked our generated library into the Linux kernel by porting some C++ standard containers and integrating the GNU g++ compiler into the kernel build process.
+The library can be compiled as either a user space library or as part of a Linux kernel module. We linked our generated library into the Linux kernel by porting some C++ standard containers and integrating the GNU g++ compiler into the kernel build process with some minor changes.
 
 Every annotated structure is wrapped in a class that implements the \texttt{Entity} interface. Figure~\ref{fig:ext3_dirent_library_wrapper} shows an example structure for the Ext4 directory entry. The \texttt{name} field is initialized with its name and type for introspection, and also a reference to the structure so that it can reference \texttt{self} during parsing. We make each of the fields publicly visible by using the cast and assignment operators in the field's template class. Application programmers can thus access these fields as if they were accessing the actual C structure.
 
@@ -27,8 +27,6 @@ Currently, the fetch function always reads data from storage because we have not
 % (jsun): reviewer B's comment
 Spiffy currently does not support readahead for iterating through contiguous extents, although it can easily be implemented. Spiffy also does not support concurrency and the application must handle it manually if
 it is multi-threaded.
-
-
 
 \paragraph*{Address Spaces}
 
@@ -48,8 +46,8 @@ When the I/O operation is a write, the module needs to determine the type of the
 
 Since most dynamically-typed blocks are data blocks, they should be discarded immediately to reduce memory overhead. For the Btrfs file system, this is relatively easy because metadata blocks are self-identifying.  For Ext4, these blocks need to be temporarily buffered until they can be interpreted. However, we use a heuristic for Ext4 to quickly identify dynamically-typed blocks that are definitely not metadata, to reduce the memory overhead of deferred interpretation. The block is first parsed as if it were a dynamically allocated block (e.g., a directory block or extent metadata block), and if the parsing results in an error, then the block is assumed to be data and discarded. This heuristic could be used in other file systems as well because most file systems have a small number of dynamically allocated metadata block types, or their blocks are self-identifying.
 
-Our runtime interpretation system is currently used to read file system blocks. Supporting applications that write blocks, such as IO shepherding~\cite{Gunawi07}, will require an IO manager that can make its own IO requests.
+Our runtime interpretation system is currently used to read file system blocks. Supporting applications that write blocks, such as IO shepherding~\cite{Gunawi07}, will require an IO manager that can make its own IO requests, which is outside the scope of what Spiffy provides.
 
-The module currently relies on the file system to issue \texttt{trim} operations to detect deallocation of blocks so that stale entries can be removed from the mapping table. Since file systems do not guarantee correct implementation of \texttt{trim}, the module additionally flushes out entries for dynamically allocated blocks that have not been accessed recently. This works for a caching application, but may lead to mis-classification for other runtime applications. Accurate classification can be implemented by keeping the previous versions of blocks and comparing the versions at transaction commit time~\cite{Fryer2012b}. However, it comes with a higher memory overhead.
+The module currently relies on the file system to issue \texttt{trim} operations to detect deallocation of blocks so that stale entries can be removed from the mapping table. Since file systems do not guarantee correct implementation of \texttt{trim}, the module additionally flushes out entries for dynamically allocated blocks that have not been accessed recently. This works for a caching application, but may lead to mis-classification for other runtime applications. Accurate classification can be implemented by keeping the previous versions of blocks and comparing the versions at transaction commit time. However, it comes with a higher memory overhead~\cite{Fryer2012b}.
 
 %% This is because of write ordering. If the pointer to a block is written before the block itself is written, the written block will be marked as "unknown" until a subsequent pointer to it is written. However, since the pointer is written first, the block can never be classified with our implementation. During checkpointing, write ordering is not guaranteed. This is one of the issues with not interpreting the journal but instead the final location of metadata.
