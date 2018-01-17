@@ -1,8 +1,6 @@
 \section{Implementation\label{sec:Implementation}}
 
-% (jsun): remove until we switch to no automatic section symbol
-%Appendix~\ref{sec:Annotation_Language}
-We implemented a compiler that parses Spiffy annotations. (These annotations are described in Table~\ref{tab:annotation_language} of Appendix A)
+We implemented a compiler that parses Spiffy annotations. (These annotations are described in Table~\ref{tab:annotation_language} of Appendix~\ref{sec:Annotation_Language})
 %
 %% REMOVED for the FAST submission - Ashvin
 %
@@ -18,13 +16,19 @@ Every annotated structure is wrapped in a class that implements the \texttt{Enti
 
 %% The simple file-system traversal application shown in Figure~\ref{fig:fs-traversal-example} uses these entity structures.
 
-The generated library performs various types of error-checking operations. For example, the parsing of offset fields ensures that objects do not cross container boundaries, and that all variable-sized structures fit within their containers. These checks are essential if an application aims to handle file system corruption. When parsing does fail, an error code is propagated to the caller of the \texttt{parse} or \texttt{serialize} function.
+The generated library performs various types of error-checking operations. For example, the parsing of offset fields ensures that objects do not cross container boundaries, and that all variable-sized structures fit within their containers. These checks are essential if an application aims to handle file system corruption. When parsing does fail, an error code is propagated to the caller of the \texttt{parse} or \texttt{serialize} function. Spiffy guarantees that as long as all type-safety checks pass, then parsing and serialization will not cause a crash.
 
 %% REMOVED for the FAST submission - Ashvin
 
 %% Our path-based name resolution mechanism resolves a name in the reverse order of the path from the super block. For example, suppose the path is $A\rightarrow B_{1}\rightarrow C\rightarrow B_{2}\rightarrow D$, where each symbol is a unique structure type, and $B_{1}$and $B_{2}$ are separate instances of the same type. Structure $C$ would resolve \emph{B} as $B_{1}$, but \emph{D} would resolve \emph{B} as $B_{2}$, and not see $B_{1}$. However, it can use $C.B$ to access $B_{1}$. This mechanism is implemented by associating a path object and a parent entity with each entity. After a pointer is used to fetch and parse an entity, its path object is created by performing a shallow copy of the parent's path object, and appending a pointer to the current entity. The shallow copy increments entity reference counts, ensuring that the names in the path can be referenced correctly. When a name is not specified for a structure (in the \texttt{FSSTRUCT} annotation), the corresponding entity is not added to the path.
 
-Currently, the fetch function always reads data from storage because we have not implemented an entity cache. This doesn't affect a tree traversal in which each entity is read once, but if a structure can be accessed using multiple paths, then it would be read multiple times.
+Currently, the fetch function always reads data from storage because we have not implemented an entity cache. This doesn't affect a tree traversal in which each entity is read once, but if a structure can be accessed using multiple paths, then it would be read multiple times. 
+
+% (jsun): reviewer B's comment
+Spiffy currently does not support readahead for iterating through contiguous extents, although it can easily be implemented. Spiffy also does not support concurrency and the application must handle it manually if
+it is multi-threaded.
+
+
 
 \paragraph*{Address Spaces}
 
