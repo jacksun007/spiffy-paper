@@ -33,7 +33,7 @@ In this section, we describe the concepts that motivated the design of our annot
 
 \paragraph{File System Pointers}
 
-File system pointers connect the metadata structures in a file system, but they are not well specified in C data structure definitions, as explained in \ref{sec:Introduction}. 
+File system pointers connect the metadata structures in a file system, but they are not well specified in C data structure definitions, as explained in Section~\ref{sec:Introduction}. 
 %An in-memory pointer is a memory location that holds a virtual address of a data structure of a specific type. A file system pointer is similar, but file system addresses can be of different types. The most common type is a block type,
 The difference between a file system pointer and an in-memory pointer is that the contents of an in-memory pointer are always interpreted as the in-memory address of the pointed-to data, but interpreting the address contained by a file system pointer may involve multiple layers of translation.
 The most common type of file system pointer is a block pointer,
@@ -201,7 +201,7 @@ With online interpretation, the application already has the buffer containing th
 
 \subsection{Building Applications\label{subsec:Building-Applications}}
 
-Figure~\ref{fig:fs-traversal-example} shows a sample application built using the Spiffy API. This application prints the type of each metadata block in an Ext4 file system in depth-first order. The \texttt{Ext4IO} class implements the block and the file address space, as described later in \ref{sec:Implementation}. The program starts by invoking \texttt{fetch\_super}, which fetches the super block from a known location on disk and parses it. Then it uses two mutually recursive visitors, \texttt{EntVisitor} and \texttt{PtrVisitor}, to traverse the file system.
+Figure~\ref{fig:fs-traversal-example} shows a sample application built using the Spiffy API. This application prints the type of each metadata block in an Ext4 file system in depth-first order. The \texttt{Ext4IO} class implements the block and the file address space, as described later in Section~\ref{sec:Implementation}. The program starts by invoking \texttt{fetch\_super}, which fetches the super block from a known location on disk and parses it. Then it uses two mutually recursive visitors, \texttt{EntVisitor} and \texttt{PtrVisitor}, to traverse the file system.
 
 The \texttt{EntVisitor::visit} function takes an entity as input, prints its name, and then invokes \texttt{accept\_pointers}, which calls the \texttt{PtrVisitor::visit} function for every pointer in the entity. The \texttt{PtrVisitor::visit} function invokes \texttt{fetch}, which fetches the pointed-to entity from disk, and invokes \texttt{EntVisitor::visit} on it.
 
@@ -236,4 +236,4 @@ void main(void) {
 \vspace{-5pt}
 \end{figure}
 
-Consider another application that shows file-system fragmentation by plotting a histogram of the size of free extents in the file system. This application will require file-system specific logic depending on how free space is represented, e.g., bitmaps for Ext4, and free space extents for Btrfs. This logic is implemented by modifying the code shown in Figure~\ref{fig:fs-traversal-example} with custom visit functions for just these structures, while the rest of the code in the application will be common across file systems.
+Consider another application that shows file-system fragmentation by plotting a histogram of the size of free extents in the file system. This application will require file-system specific logic depending on how free space is represented, e.g., bitmaps for Ext4, and used space extents for Btrfs. This logic is implemented by modifying the code shown in Figure~\ref{fig:fs-traversal-example} with custom visit functions for just these structures, while the rest of the code in the application will be common across file systems.

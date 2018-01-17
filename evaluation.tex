@@ -1,7 +1,9 @@
 \section{Evaluation\label{sec:Evaluation}}
 
 In this section, we discuss the effort required to annotate the structures
-of existing file systems, the effort required to write Spiffy applications, and then evaluate the performance of our file-system conversion tool and the file-system aware block-layer caching mechanism.
+of existing file systems, the effort required to write Spiffy applications, 
+and the correctness of Spiffy libraries. We then evaluate the performance 
+of our file-system conversion tool and the file-system aware block-layer caching mechanism.
 
 \subsection{Annotation Effort\label{subsec:Annotation-Effort}}
 
@@ -53,9 +55,35 @@ In this section, we evaluate the effort required to develop Spiffy applications.
 
 \noindent\textbf{Free Space Tool:} The file system free space tool is written using 271 lines of file system independent C++ code, along with additional code used to retrieve free space information from each file system. In addition, 76 lines are Ext4 specific, 77 lines are Btrfs specific, and 194 lines are F2FS specific. F2FS requires more code due to the complex format of its block allocation information.
 
-\noindent\textbf{Conversion Tool:} The Spiffy file system conversion tool framework is written in 504 lines of code. The code for reading Ext4 takes 218 lines, the code to convert to the F2FS file system requires 1760 lines, and the file-system developer code for F2FS, which is reused in other applications such as the dump tool, consists of 383 lines. We also wrote a manual converter tool that uses the \texttt{libext2fs}~\cite{tso-e2fsprogs} library to copy Ext4 metadata from the source file system, and manually writes raw data to create an F2FS file system. The manual converter has 223 lines of Ext4 code, and 2260 lines for the F2FS code. In this case, the two converters have similar number of lines of code, but the Spiffy converter has several other benefits. On the source side, the manual converter takes advantage of the \texttt{libext2fs} library. Changing this code for a different file system would require significant changes, and would require much more code for a file system such as ZFS that does not have a similar user-level library. On the destination side, the main reason that the Spiffy converter requires many file-system specific lines of code is that each newly created object needs to be initialized, and the initialization has to be performed manually. However, Spiffy uses the \texttt{create\_container} and \texttt{save} functions to create and serialize objects in a type-safe manner, and checks constraints on objects, while the manual converter writes raw data, which is error-prone, leading to the types of bugs discussed in \ref{sec:Extended-Motivation}.
+\noindent\textbf{Conversion Tool:} The Spiffy file system conversion tool framework is written in 504 lines of code. The code for reading Ext4 takes 218 lines, the code to convert to the F2FS file system requires 1760 lines, and the file-system developer code for F2FS, which is reused in other applications such as the dump tool, consists of 383 lines. We also wrote a manual converter tool that uses the \texttt{libext2fs}~\cite{tso-e2fsprogs} library to copy Ext4 metadata from the source file system, and manually writes raw data to create an F2FS file system. The manual converter has 223 lines of Ext4 code, and 2260 lines for the F2FS code. In this case, the two converters have similar number of lines of code, but the Spiffy converter has several other benefits. On the source side, the manual converter takes advantage of the \texttt{libext2fs} library. Changing this code for a different file system would require significant changes, and would require much more code for a file system such as ZFS that does not have a similar user-level library. On the destination side, the main reason that the Spiffy converter requires many file-system specific lines of code is that each newly created object needs to be initialized, and the initialization has to be performed manually. However, Spiffy uses the \texttt{create\_container} and \texttt{save} functions to create and serialize objects in a type-safe manner, and checks constraints on objects, while the manual converter writes raw data, which is error-prone, leading to the types of bugs discussed in Section~\ref{sec:Extended-Motivation}.
 
 \noindent\textbf{Prioritized Cache:} The original Bcache code consisted of 10518 lines of code. To implement prioritized caching we added 289 lines to this code, which invokes our generic runtime metadata interpretation framework, consisting of 2158 lines of code. This framework provides hooks to specify file-system specific policies. Our Ext4-specific policy requires 111 lines of code, and the Btrfs-specific policy requires 134 lines of code. Currently, we have not implemented prioritized caching for F2FS, which would require tracking NAT entries, similar to how we track inode numbers for Btrfs to find their file extents.
+
+\subsection{Corruption Experiment\label{subsec:corruption_experiment}}
+
+To evaluate the correctness of Spiffy generated libaries, we ran a series 
+of type-specific corruption experiments on existing file system 
+dump tools and the Spiffy dump tool. The type-specific corruption experiment
+takes a 128MB file system image filled with 12000 tiny files (less than 4 bytes) 
+and some directories, then corrupts a specific field of a selected
+instance of a specified type (e.g., one of the inode structures). The field 
+is either corrupted to a random value or zero.
+
+The Spiffy dump tool was able to generate correctly formatted XML files in the 
+face of arbitrary single-field corruptions. dumpe2fs (dump tool for Ext4) 
+and btrfs-debug-tree were also able terminate gracefully when attempting to
+parse the same corrupted image. However, we recorded dump.f2fs 10 instances
+of abnormal program termination, including assertion errors and segmentation
+faults. 8 of the crashes were due to corruption in the super block, and 1 crash
+was detected for the checkpoint and inode structure.
+
+The results were expected since F2FS is a relatively young file system. Btrfs,
+applies metadata checksumming technique to avoid metadata
+corruption not caused by the file system itself, and thus requires correlated
+corruption to reveal any potential bugs. Lastly, Ext4, being the most 
+battle-tested file system for Linux, has hardened itself against various forms
+of corruption. It is encouraging to know that Spiffy is able to do as well as 
+dumpe2fs in terms of robustness without requiring significant testing efforts.
 
 \subsection{File System Conversion Performance\label{subsec:fsconvert_performance}}
 
@@ -92,7 +120,7 @@ The copy converter requires transferring two full copies of the file set, and so
 
 \subsection{Prioritized Cache Performance\label{subsec:pcache_performance}}
 
-We measure the performance of our prioritized block layer cache (see \ref{sec:File-System-Applications}), and compare it against LRU caching with one or two instances of the same workload.
+We measure the performance of our prioritized block layer cache (see Section~\ref{sec:File-System-Applications}), and compare it against LRU caching with one or two instances of the same workload.
 
 Our experimental setup includes a client machine connected to a storage server over a 10Gb Ethernet using the iSCSI protocol. The storage server runs Linux 3.11.2 and has 4 Intel Processor E7-4830 CPUs for a total of 32 cores, 256GB of memory and a software RAID-6 volume consisting of 13 Hitachi HDS721010 SATA2 7200 RPM disks. The client machine runs Linux 4.4.0 with Intel Processor E5-2650, and an Intel 510 Series SATA SSD that is used for client-side caching. To mimic the memory-to-cache ratio of real-world storage servers, we limit the memory on the client to 4GB and use 8GB of the SSD for write-back caching. The RAID partition is formatted with either the Ext4 or Btrfs file system and is used as the primary storage device. To avoid any scheduling related effects, the NOOP I/O scheduler is used in all cases for both the caching and primary device.
 
