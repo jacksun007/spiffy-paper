@@ -93,6 +93,7 @@ Base Class & Member Function & Description \tabularnewline
 \hline 
 Entity & \texttt{int accept\_fields(Visitor \& v)} & allows \textit{v} to visit all fields of this object \tabularnewline
  & \texttt{int accept\_pointers(Visitor \& v)} & allows \textit{v} to visit all pointer fields of this object \tabularnewline
+ & \texttt{int accept\_by\_type(int t, Visitor \& v)} & allows \textit{v} to visit all structures of type \textit{t} \tabularnewline 
 \hline 
 Pointer & \texttt{Entity * fetch()} & retrieves the pointed-to container from disk \tabularnewline
 \hline
@@ -129,7 +130,9 @@ Table~\ref{tab:library-api} shows a subset of the API for building Spiffy applic
 
 The Spiffy library uses the visitor pattern~\cite{gamma1995design} so that a programmer can customize the operations performed on each file system metadata type by implementing the \texttt{visit} function of the abstract base class \texttt{Visitor}.
 
-The \texttt{Entity} base class provides a common interface for all metadata, including objects (structures, vectors, fields), pointers, containers and extents. The \texttt{accept\_pointers} function invokes the \texttt{visit} function of an application-defined Visitor on each pointer within the entity.
+%The \texttt{Entity} base class provides a common interface for all metadata, including objects (structures, vectors, fields), pointers, containers and extents. The \texttt{accept\_pointers} function invokes the \texttt{visit} function of an application-defined Visitor on each pointer within the entity.
+
+The \texttt{Entity} base class provides a common interface for all metadata structures their fields. The \texttt{accept\_pointers} function invokes the \texttt{visit} function of an application-defined Visitor class on each pointer within the entity. \texttt{accept\_by\_type} allows visit of specified structure type reachable from the entity. Unlike the previous two versions of accept, \texttt{accept\_by\_type} will automatically follow pointers. Thus, for example, invoking \texttt{accept\_by\_type} on the super block with inode structure as the argument will result in all inodes in the file system being visited.
 
 Every container (and extent) has an address associated with it that allows accessing the container from disk. Figure~\ref{fig:address-struct} shows the format of an address, consisting of an address space, an identifier and an offset within the address space, and the size of the container. The offset field is used when a container belongs to an extent.
 
