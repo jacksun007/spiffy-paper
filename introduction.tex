@@ -12,7 +12,7 @@ There are many file-system aware storage applications that bypass the virtual fi
 \cline{1-2} 
 {\small{}Defragmentation tool} & {\small{}either} & \tabularnewline
 \hline 
-{\small{}File system checker~\cite{Gunawi08b}} & {\small{}offline} & \multirow{4}{*}{{\small{}reliability}}\tabularnewline
+{\small{}File system checker~\cite{Gunawi08b}} & {\small{}either} & \multirow{4}{*}{{\small{}reliability}}\tabularnewline
 \cline{1-2} 
 {\small{}Data recovery tool~}\cite{buckeye2006recovering} & {\small{}either} & \tabularnewline
 \cline{1-2} 
@@ -20,13 +20,13 @@ There are many file-system aware storage applications that bypass the virtual fi
 \cline{1-2} 
 {\small{}Runtime verification}~\cite{Fryer2012b} & {\small{}online} & \tabularnewline
 \hline 
-{\small{}File system conversion tool} & {\small{}either} & \multirow{2}{*}{{\small{}administrative}}\tabularnewline
+{\small{}File system conversion tool} & {\small{}offline} & \multirow{2}{*}{{\small{}administrative}}\tabularnewline
 \cline{1-2} 
 {\small{}Partition editor~\cite{gedak2012manage}} & {\small{}offline} & \tabularnewline
 \hline 
 {\small{}Type-specific corruption~\cite{bairavasundaram2008analyzing}} & {\small{}either} & \multirow{2}{*}{{\small{}debugging}}\tabularnewline
 \cline{1-2} 
-{\small{}Metadata dump tool} & {\small{}offline} & \tabularnewline
+{\small{}Metadata dump tool} & {\small{}either} & \tabularnewline
 \hline 
 \end{tabular}
 \vspace{-7pt}
@@ -36,15 +36,16 @@ There are many file-system aware storage applications that bypass the virtual fi
 
 Online storage applications need to understand the file-system semantics of blocks as they are accessed at runtime. For example, whether the block is a data or a metadata block, whether it belongs to a specific type of file, etc. These applications help improve the performance or reliability of a storage system by performing file-system specific processing at the storage layer. For example, differentiated storage services~\cite{Mesnier2011} improve performance by preferentially caching blocks that contain file-system metadata or the data of small files. I/O shepherding~\cite{Gunawi07} improves reliability by using file structure information to implement checksumming and replication.  Similarly, the Recon system~\cite{Fryer2012b} improves reliability by verifying the correctness of file-system metadata operations at the storage layer.
 
-\emph{Note: it is probably this `online' stuff that is causing people to ask about concurrent modification}
+% (daniel):
+% \emph{Note: it is probably this `online' stuff that is causing people to ask about concurrent modification}
 
 Today, developers of these storage applications perform ad-hoc processing of file system metadata because most file systems do not provide the requisite library code. Even when such library code exists, its interface may not be usable by all storage applications. For example, the libext2fs library only supports offline interpretation of a Linux Ext3/4 file system partition; it does not support online use. Furthermore, the libraries of different file systems, even when they exist, do not provide similar interfaces. As a result, these storage applications have to be developed from scratch, or significantly rewritten for each file system, impeding the adoption of new file systems or new file-system functionality.
 
 To make matters worse, many file systems do not provide detailed and up-to-date documentation of their metadata format. The ad-hoc processing performed by these storage applications is thus error-prone and can lead to system instability, security vulnerability, and data corruption~\cite{bangert2014nail}.  For example, \texttt{fsck} can sometimes further corrupt a file system~\cite{yang2006using}. Some storage applications reduce the amount of file-system specific code in their implementation by modifying their target file system and operating system~\cite{Mesnier2011,Gunawi07}. However, this approach only works for specific file systems, and it can introduce its own set of bugs. It also requires using custom system software, which may be impractical in virtual machine and cloud environments.
 
-Our aim is to reduce the burden of developing file-system aware storage applications. Because file systems share common abstractions (e.g. files, directories, inodes), there are common elements and algorithms shared between each implementation of a file-system aware application. Additionally, different applications for the \textit{same} file system include the the same low-level details needed to parse file system data structures and traverse pointers between them. To the extent that this functionality overlaps, we believe that it can be factored out into components which parse and traverse file system metadata, and applications which operate on abstractions which reflect the commonalities between file systems.
+Our aim is to reduce the burden of developing file-system aware storage applications. Because file systems share common abstractions (e.g. files, directories, inodes), there are common elements and algorithms shared between each implementation of a file-system aware application. Additionally, different applications for the \textit{same} file system include the the same low-level details needed to parse file system data structures and traverse pointers between them. To the extent that this functionality overlaps, we believe that it can be factored out into components which parse and traverse file system metadata, and applications which operate on abstractions that reflect the commonalities between file systems.
 
-In this paper, we take steps towards that by creating an annotation language to specify a file system format as well as an API, which together make it possible to generate code which can traverse a file system's metadata. The generated code allows a developer to write actions for different pieces of file system metadata, invoking file system specific or generic code as needed. The annotations handle low level details concerning the encoding of specific fields, pointer relationships between structures, and other details required to traverse, identify and parse the metadata structures correctly and automatically.
+In this paper, we take steps towards this vision by creating an annotation language to specify a file system format as well as an API, which together make it possible to generate code that can traverse a file system's metadata. The generated code allows a developer to write actions for different pieces of file system metadata, invoking file-system specific or generic code as needed. The annotations handle low level details concerning the encoding of specific fields, pointer relationships between structures, and other details required to traverse, identify and parse the metadata structures correctly and automatically.
 
 Obviously, we cannot abstract away the fact that file systems sometimes differ fundamentally in semantics in ways which make fully-generic tools impossible; for example, NTFS and HFS+ support files with multiple streams of data, in contrast to flat files in VFS file systems. The author of a tool may have to choose between treating the separate streams as separate files, treating the streams as a homogenous file, or supporting the abstraction of multi-streamed files within the tool. We ultimately envision this gap being bridged with file-system specific policies, which allow an application to choose between ways of handling differences between file systems.
 
@@ -54,7 +55,7 @@ Obviously, we cannot abstract away the fact that file systems sometimes differ f
 
 %so that the file system metadata can be identified, parsed and traversed correctly and automatically. 
 
-%This simplifies the process of mapping file system specific types (e.g. a struct ext4_inode, or a btrfs_inode_item) to a higher level abstraction (e.g. "an inode").
+%This simplifies the process of mapping file-system specific types (e.g. a struct ext4_inode, or a btrfs_inode_item) to a higher level abstraction (e.g. "an inode").
 
 %Application developers can thus focus on the logic of their applications, and write file-system specific policies more easily.
 
