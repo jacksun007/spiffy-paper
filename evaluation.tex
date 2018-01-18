@@ -76,12 +76,14 @@ or fails placement constraint), an error is printed and the program stops the
 traversal process. 
 
 We also run the same corrupted images on existing tools.
-For dumpe2fs (dump tool for Ext4), we recorded a single crash when the \texttt{s\_creator\_os}
-field of the super block is corrupted. For dump.f2fs, we observed 6 instances
+For dumpe2fs (dump tool for Ext4) v1.42.13, we recorded a single crash when 
+the \texttt{s\_creator\_os}
+field of the super block is corrupted. For dump.f2fs v1.6.1-1, we observed 6 
+instances
 of abnormal program termination, including assertion errors and segmentation
 faults. 4 of the crashes were due to corruption in the super block, and 1 crash
 each was detected for the checkpoint and inode structure. We were unable
-to trigger any crash-related bugs in btrfs-debug-tree.
+to trigger any crash-related bugs in btrfs-debug-tree v4.4.
 
 The results were expected since F2FS is a relatively young file system. Btrfs
 applies metadata checksumming technique to avoid metadata
