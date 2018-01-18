@@ -8,17 +8,17 @@ There are many file-system aware storage applications that bypass the virtual fi
 \hline 
 \multicolumn{1}{|c|}{\textbf{\small{}Storage Applications}} & \textbf{\small{}Category} & \textbf{\small{}Purpose}\tabularnewline
 \hline 
-{\small{}Differentiated services}~\cite{Mesnier2011}  & {\small{}online} & \multirow{2}{*}{{\small{}performance}}\tabularnewline
+{\small{}Differentiated services~\cite{Mesnier2011}} & {\small{}online} & \multirow{2}{*}{{\small{}performance}}\tabularnewline
 \cline{1-2} 
 {\small{}Defragmentation tool} & {\small{}either} & \tabularnewline
 \hline 
 {\small{}File system checker~\cite{Gunawi08b}} & {\small{}either} & \multirow{4}{*}{{\small{}reliability}}\tabularnewline
 \cline{1-2} 
-{\small{}Data recovery tool~}\cite{buckeye2006recovering} & {\small{}either} & \tabularnewline
+{\small{}Data recovery tool~\cite{buckeye2006recovering}} & {\small{}either} & \tabularnewline
 \cline{1-2} 
-{\small{}IO shepherding}~\cite{Gunawi07}  & {\small{}online} & \tabularnewline
+{\small{}IO shepherding~\cite{Gunawi07}} & {\small{}online} & \tabularnewline
 \cline{1-2} 
-{\small{}Runtime verification}~\cite{Fryer2012b} & {\small{}online} & \tabularnewline
+{\small{}Runtime verification~\cite{Fryer2012b}} & {\small{}online} & \tabularnewline
 \hline 
 {\small{}File system conversion tool} & {\small{}offline} & \multirow{2}{*}{{\small{}administrative}}\tabularnewline
 \cline{1-2} 
@@ -61,7 +61,7 @@ Unfortunately, we cannot abstract away the fact that file systems sometimes diff
 %This separation of the development of applications from the specification and interpretation of file system formats simplifies the process of building these applications, or adapting them for new file systems.
 
 
-In this paper, we introduce Spiffy,\footnote{\textbf{Sp}ecifying and \textbf{I}nterpreting the \textbf{F}ormat of \textbf{F}iles\textbf{y}stems} a language for annotating file system data structures defined in the C language. The annotations augment existing data structure definitions, so that the relationships between file system structures can be explicitly and concisely stated. Spiffy allows file system developers to unambiguously specify the \emph{physical} layout of the file system. We compile the annotated source code to produce a library that enables type-safe parsing and traversal of file system metadata, both for offline or online applications. The generic interfaces provided by the library simplify the development of file-system aware applications, making it easier to write applications that work across different file systems.
+We introduce Spiffy,\footnote{\textbf{Sp}ecifying and \textbf{I}nterpreting the \textbf{F}ormat of \textbf{F}iles\textbf{y}stems} a language for annotating file system data structures defined in the C language. The annotations augment existing data structure definitions, so that the relationships between file system structures can be explicitly and concisely stated. Spiffy allows file system developers to unambiguously specify the \emph{physical} layout of the file system. We compile the annotated source code to produce a library that enables type-safe parsing and traversal of file system metadata, both for offline or online applications. The generic interfaces provided by the library simplify the development of file-system aware applications, making it easier to write applications that work across different file systems.
 
 % The complexity of modern file systems~\cite{Lu2013} raises several challenges for our specification-based approach. There are many aspects of file system structures and their relationships that are not captured by their declarations in header files. First, an on-disk pointer in a file-system structure may be implicitly specified as an integer, as shown below. The naming convention suggests that this field is a pointer, but that fact cannot be deduced from the structure definition; it requires higher-level knowledge from the application programmer.
 
@@ -96,7 +96,7 @@ We expand on how Spiffy addresses each of these points in~Section~\ref{subsec:An
 
 Our annotation strategy makes two assumptions about file systems. We assume that the interpretation of a piece of file system metadata does not depend on the interpretation of children reached by traversing that same metadata. We also assume that any context-sensitive interpretations can be performed by a function or expression free of side effects.
 
-We have annotated three file systems, 1) Ext4, an update-in-place file system, 2) Btrfs, a copy-on-write file system, and 3) F2FS, a log-structured file system~\cite{lee2015f2fs}. We have implemented three applications that are designed to work across file systems, a file system dump tool, a file system converter, and a storage layer service that preferentially caches data for specific users.
+We have annotated three file systems, 1) Ext4, an update-in-place file system, 2) Btrfs, a copy-on-write file system, and 3) F2FS, a log-structured file system~\cite{lee2015f2fs}. We have implemented four applications that are designed to work across file systems, a file system dump tool, a free space reporting tool, a file system converter, and a storage layer service that preferentially caches data for specific users.
 
 \begin{table*}[th!]
 \centering{}%
