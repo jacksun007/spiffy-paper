@@ -45,7 +45,7 @@ the Ext4 inode structure and replaced \texttt{i\_block} with the extent header
 followed by four extent entries.
 \end{enumerate}
 
-\subsection{Application Developer Effort\label{subsec:Developer-Effort}}
+\subsection{Application-Developer Effort\label{subsec:Developer-Effort}}
 
 In this section, we evaluate the effort required to develop Spiffy applications. 
 
@@ -53,7 +53,8 @@ In this section, we evaluate the effort required to develop Spiffy applications.
 
 \noindent\textbf{Conversion Tool:} The Spiffy file system conversion tool framework is written in 504 lines of code. The code for reading Ext4 takes 218 lines, the code to convert to the F2FS file system requires 1760 lines, and the file-system developer code for F2FS, which is reused in other applications such as the dump tool, consists of 383 lines. We also wrote a manual converter tool that uses the \texttt{libext2fs}~\cite{tso-e2fsprogs} library to copy Ext4 metadata from the source file system, and manually writes raw data to create an F2FS file system. The manual converter has 223 lines of Ext4 code, and 2260 lines for the F2FS code. In this case, the two converters have similar number of lines of code, but the Spiffy converter has several other benefits. On the source side, the manual converter takes advantage of the \texttt{libext2fs} library. Changing this code for a different file system would require significant changes, and would require much more code for a file system such as ZFS that does not have a similar user-level library. On the destination side, the main reason that the Spiffy converter requires many file-system specific lines of code is that each newly created object needs to be initialized, and the initialization has to be performed manually. However, Spiffy uses the \texttt{create\_container} and \texttt{save} functions to create and serialize objects in a type-safe manner, and checks constraints on objects, while the manual converter writes raw data, which is error-prone, leading to the types of bugs discussed in \ref{sec:Extended-Motivation}.
 
-\noindent\textbf{Prioritized Cache:} The original Bcache code consisted of 10518 lines of code. To implement prioritized caching we added 289 lines to this code, which invokes our generic runtime metadata interpretation framework, consisting of 2158 lines of code. This framework provides hooks to specify file-system specific policies. Our Ext4-specific policy requires 111 lines of code, and the Btrfs-specific policy requires 134 lines of code. Currently, we have not implemented prioritized caching for F2FS, which would require tracking NAT entries, similar to how we track inode numbers for Btrfs to find their file extents.
+\noindent\textbf{Prioritized Cache:} The original Bcache code consisted of 10518 lines of code. To implement prioritized caching we added 289 lines to this code, which invokes our generic runtime metadata interpretation framework, consisting of 2158 lines of code. This framework provides hooks to specify file-system specific policies. Our Ext4-specific policy requires 111 lines of code, and the Btrfs-specific policy requires 134 lines of code. Currently, we have not implemented prioritized caching for F2FS, which would require tracking NAT entries, similar to how we track inode numbers for Btrfs;  we expect that
+the code size would be similar to the other file systems.
 
 \subsection{File System Conversion Performance\label{subsec:fsconvert_performance}}
 
