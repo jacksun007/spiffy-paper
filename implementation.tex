@@ -24,10 +24,6 @@ The generated library performs various types of error-checking operations. For e
 
 Currently, the fetch function always reads data from storage because we have not implemented an entity cache. This doesn't affect a tree traversal in which each entity is read once, but if a structure can be accessed using multiple paths, then it would be read multiple times. 
 
-% (jsun): reviewer B's comment
-Spiffy currently does not support readahead for iterating through contiguous extents, although it can easily be implemented. Spiffy also does not support concurrency and the application must handle it manually if
-it is multi-threaded.
-
 \paragraph*{Address Spaces}
 
 We require annotation developers to implement the \texttt{IO} interface shown in Table~\ref{tab:library-api}. The read method maps a pointer address in an address space to a physical location on disk, and then reads a container of a given size, specified by \texttt{addr.size}, into the buffer \texttt{buf}.  \texttt{addr.offset} is used to read a container within an extent. We require a byte address space implementation so that the super block can be fetched at a fixed byte offset on disk. The super block usually contains the block size, which enables a block address space implementation.
@@ -40,14 +36,33 @@ Offline Spiffy applications use variants of the file-system traversal algorithm 
 
 In offline applications, the fetch function reads data from disk and parses the structure. The type of the structure is known from the pointer that is passed to the fetch function. In contrast, for online interpretation, the file system performs the read, and the module only parse the block that is read by calling \texttt{FileSystem::parse\_by\_type()}. However, it needs to know the type of the block before parsing is possible. Our runtime interpretation depends on the fact that a pointer to a metadata block must be read before the pointed-to block is read. When a pointer is encountered during the parsing a block, the module tracks the type of the pointed-to block. As a result, when the pointed-to block is read, its type is known.
 
-Our module exports several functions, including \texttt{interpret\_read} and \texttt{interpret\_write}, that need to be placed in the I/O path to perform runtime interpretation. The module maintain a mapping between block numbers and their types. After intercepting a completed read request, it checks whether a mapping exists in the mapping table, and if so, it is a metadata block and it gets parsed. Next, \texttt{accept\_pointers} is invoked with a visitor that adds (or updates) all the pointers that are found in the block into the mapping table.
+Our module exports several functions, including \texttt{interpret\_read} and \texttt{interpret\_write}, that need to be placed in the I/O path to perform runtime interpretation. The module maintain a mapping between block numbers and their types. After intercepting a completed read request, it checks whether a mapping exists in the mapping table, and if so, it is a metadata block and it gets parsed. Next, \texttt{process\_pointers} is invoked with a visitor that adds (or updates) all the pointers that are found in the block into the mapping table.
 
 When the I/O operation is a write, the module needs to determine the type of the written block. A statically allocated block can be immediately parsed because its type will not change. For example, most metadata blocks in Ext4 are statically allocated. However, in Btrfs, the super block is the only statically allocated metadata block. For dynamically allocated blocks, the block must first be labeled as unknown and its contents cached, since its type may either be unknown or have changed. Interpretation for this block is deferred until it is referenced by a block that is subsequently accessed (either read or written), and whose type is known. At that point, the module will interpret all unknown blocks that are referenced.
 
 Since most dynamically-typed blocks are data blocks, they should be discarded immediately to reduce memory overhead. For the Btrfs file system, this is relatively easy because metadata blocks are self-identifying.  For Ext4, these blocks need to be temporarily buffered until they can be interpreted. However, we use a heuristic for Ext4 to quickly identify dynamically-typed blocks that are definitely not metadata, to reduce the memory overhead of deferred interpretation. The block is first parsed as if it were a dynamically allocated block (e.g., a directory block or extent metadata block), and if the parsing results in an error, then the block is assumed to be data and discarded. This heuristic could be used in other file systems as well because most file systems have a small number of dynamically allocated metadata block types, or their blocks are self-identifying.
 
-Our runtime interpretation system is currently used to read file system blocks. Supporting applications that write blocks, such as IO shepherding~\cite{Gunawi07}, will require an IO manager that can make its own IO requests, which is outside the scope of what Spiffy provides.
+%Our runtime interpretation system is currently used to read file system blocks. Supporting applications that write blocks, such as IO shepherding~\cite{Gunawi07}, will require an IO manager that can make its own IO requests, which is outside the scope of what Spiffy provides.
 
 The module currently relies on the file system to issue \texttt{trim} operations to detect deallocation of blocks so that stale entries can be removed from the mapping table. Since file systems do not guarantee correct implementation of \texttt{trim}, the module additionally flushes out entries for dynamically allocated blocks that have not been accessed recently. This works for a caching application, but may lead to mis-classification for other runtime applications. Accurate classification can be implemented by keeping the previous versions of blocks and comparing the versions at transaction commit time. However, it comes with a higher memory overhead~\cite{Fryer2012b}.
 
 %% This is because of write ordering. If the pointer to a block is written before the block itself is written, the written block will be marked as "unknown" until a subsequent pointer to it is written. However, since the pointer is written first, the block can never be classified with our implementation. During checkpointing, write ordering is not guaranteed. This is one of the issues with not interpreting the journal but instead the final location of metadata.
+
+\subsection{Limitation\label{subsec:spiffy_limitation}}
+
+Spiffy does not explicitly support concurrency and the application must deal
+with synchronization manually if it is multi-threaded. We currently do 
+not support online modification of file system metadata.
+There are some optimization
+that Spiffy has yet to implement, such as support for readahead while iterating 
+through contiguous extents.
+
+The correctness of Spiffy applications currently depend on the correct and
+complete annotations. Therefore, when file system format changes, Spiffy
+applications will also need to update all of the file-system specific code
+that is affected by the change in semantics, as well as updating the annotations 
+to reflect its current format. While this appears to involve some work, it will be
+less than updating a set of manually-written tools since robust parsing
+and serialization routines are already provided by the library.
+
+

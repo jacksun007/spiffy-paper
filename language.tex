@@ -330,7 +330,7 @@ typedef FSSTRUCT(name=cphdr, rank=container,
 \end{figure}
 
 F2FS is a relatively new, log-structured file system optimized for NAND flash storage devices. Its on-disk layout is partitioned into fixed-sized segments composed of a set of contiguous blocks, with each segment sized in units of the SSD's erase block size to minimize wear. The file system contains five static metadata areas, and one main area for data blocks and dynamically allocated metadata, such as the inode shown in Figure~\ref{fig:f2fs_inode}.
-The static metadata area consists of a pair of checkpoint packs, as shown in Figure \ref{fig:F2FS-checkpoint-packs}, and various look-up tables for space and pointer management.
+The static metadata area consists of a pair of checkpoint packs, as shown in Figure \ref{fig:F2FS-checkpoint-packs}, and various lookup tables for space and pointer management.
 
 A unique challenge with annotating F2FS is its use of heterogeneous extents, i.e., extents with different types of metadata blocks. F2FS has a super block to the first checkpoint pack, shown in Figure~\ref{fig:F2FS-checkpoint-packs}. The remaining metadata blocks must be referenced by using implicit pointers. However, the block addresses of these metadata
 blocks depend on the address of the checkpoint header. Therefore, we use a special variable, \texttt{\$self}, to allow implicit pointers to specify metadata blocks that exist at certain block offsets from the current container. Figure~\ref{fig:checkpoint-header} shows the annotation for the implicit pointer that points to a vector of orphan blocks.

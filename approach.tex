@@ -6,13 +6,19 @@ The purpose of our file system annotation language is to enable robust interpret
 
 %-After a file system developer annotates their file system's data structures, we use a compiler to parse the annotated structures and to generate a library that provides file-system specific interpretation routines.  The library supports traversal and selective retrieval of metadata structures through type introspection. These facilities allow the application writer to create file-system specific policies that are applied to a subset of a file system's metadata. For example, the application may wish to operate on the directory entries of a file system. Instead of attempting to parse the entire file system and find all directory entries, which requires significant file-system specific code, a developer using Spiffy would perform selective traversal using type introspection to find and operate on directory entries. Since the directory entry format may not be the same across file systems, the application may still require file-system specific code, but this is essential to the application logic.
 
-After a file system developer annotates their file system's data structures, we use a compiler to parse the annotated structures and to generate a library that provides file-system specific interpretation routines.  The library supports traversal and selective retrieval of metadata structures through type introspection. These facilities allow the application writer to create file-system specific policies that are applied to a subset of a file system's metadata. 
+After a file system developer annotates their file system's data structures, we use a compiler to parse the annotated structures and to generate a library that provides file-system specific interpretation routines.  The library supports traversal and selective retrieval of metadata structures through type introspection. These facilities allow the application writer to create file-system specific policies that are applied to a subset of a file system's metadata. In other words, while Spiffy provides generic routines 
+for robust parsing and traversal, developers must write file-system specific
+code to give semantic meaning to the structures that the application is interested in.
 
-Application writers write code for each file-system specific structure they must process.
-When Spiffy is instructed to follow a pointer, it determines the type of the pointed-to object and invokes the corresponding application code. The Spiffy library takes care of loading the requested object into memory, parsing it into fields, and validating that it meets any constraints given in the annotations. 
+%Application developers write code for each file-system specific structure they must process. When Spiffy is instructed to follow a pointer, it determines the type of the pointed-to object and invokes the corresponding application code. The Spiffy library takes care of loading the requested object into memory, parsing it into fields, and validating that it meets any constraints given in the annotations. 
 
-For example, the application may wish to enumerate directory entries in the file system (e.g. to build a snapshot of the file system's namespace). A developer using Spiffy would write a function for each file system's "directory entry" structure, which invokes a file-system agnostic function to record the file name, or any other pertinent information. In order to optimize file system traversal, the developer could also write decision making code for other objects, to determine whether to prune the traversal of some pointers within the file system (e.g. along unwanted directory entries, or along pointers to file system metadata that cannot contain directory entries.) In contrast, a manually written application requires file-system specific code to traverse the file system, loading and validating data structures, and parsing directory entries before actually invoking any application-specific code, namely, recording the filename in the directory entry.
+% (jsun): We have the free space tool now so this example is unnecessary
+%Consider another application that shows file-system fragmentation by plotting a histogram of the size of free extents in the file system. This application will require file-system specific logic depending on how free space is represented, e.g., bitmaps for Ext4, and used space extents for Btrfs. This logic is implemented by modifying the code shown in Figure~\ref{fig:fs-traversal-example} with custom visit functions for just these structures, while the rest of the code in the application will be common across file systems. 
 
+%(e.g. to avoid unwanted directory entries, or along pointers to file system metadata that cannot contain directory entries. 
+For example, the application may wish to enumerate directory entries in a file system (e.g. to build a snapshot of the file system's namespace). A developer using Spiffy would write a function for each file system's "directory entry" structure, which invokes a file-system agnostic function to record the file name, or any other pertinent information. In order to optimize file system traversal, the developer could also write decision making code for other objects to determine whether to prune the traversal of some pointers within the file system. (e.g., for Btrfs, directory entries only exist within
+specific B-trees and others can safely be ignored)
+In contrast, a manually written application requires file-system specific code to traverse the file system, loading and validating data structures, and parsing directory entries before actually invoking any application-specific code, namely, recording the file name in the directory entry.
 
 Our annotation-based approach offers several advantages. First, it provides a concise and clear documentation of the file system's format.  Second, our generated libraries enable rapid-prototyping of file-system aware storage applications. The libraries provide a uniform API, easing the development of applications that work across file systems so that the programmer can focus on the logic and not the format of the file systems. Third, our approach requires minimal changes to the file system source code (the annotations are only in the C header files, and are backwards compatible with existing binary code), reducing the chance of introducing file system bugs. For example, differentiated storage services~\cite{Mesnier2011} was implemented by modifying the file system and the kernel's storage stack to enable I/O classification.  With our approach, this application can be implemented by using introspection at the block layer for an unmodified file system, or at the hypervisor for an existing virtual machine. Finally, file system formats are known to be stable over time, so there is minimal cost for maintaining annotations. When format changes do occur, the specifications need to be updated, as well as any file-system specific code which operate on the updated metadata structure.
 
@@ -53,14 +59,6 @@ Our design incorporates this requirement by associating an \emph{address space} 
 
 Multiple pointers may refer to the same structure. For example, the block group descriptor tables in Ext4 refer to inode tables, which have inode structures in them. Similarly, directory entries have an inode number that also refer to these inode structures, as shown in Figure~\ref{fig:ext4_dirent}. We prefer to annotate the descriptor tables with a block type pointer because the inode table can then be viewed as a contiguous structure. Annotating the inode number is possible, but will require the annotation developer to implement an inode address space for mapping inode numbers to inode structures.
 
-%
-% (jsun): we have removed alias from the language
-%
-%When multiple pointer annotations lead to the same structure, the
-%physical structure of the file system becomes a directed graph. We
-%allow the annotation developer to specify pointers as \emph{aliases},
-%so that the file system structures can be traversed in a preferred
-%tree order, and alias pointers can be ignored or treated specially.
 
 \paragraph{Cross-Structure Dependencies}
 
@@ -70,7 +68,9 @@ The naming mechanism must ensure that a name refers to the correct structure. Fo
 
 Spiffy uses a path-based name resolution mechanism, based on the observation that every file system structure is accessed along a path of pointers starting from the super block. In the simplest case, the automatic \texttt{self} variable is used to reference the fields of the same structure. Otherwise, a name lookup is performed in the reverse order of the path that was used to access the data structure. For example, in Figure~\ref{fig:F2FS-checkpoint-packs}, when we need to reference the checkpoint header (\texttt{cphdr} in the figure) while parsing the orphan block, the name resolution mechanism can unambiguously determine that it is referring to its parent checkpoint header.
 %Our path-based naming approach works for both normal and alias pointers.
-It also makes it easy to use reference counting to ensure that a referenced structure is valid in memory when it needs to be accessed.
+
+% (jsun): necessary to mention this?
+%It also makes it easy to use reference counting to ensure that a referenced structure is valid in memory when it needs to be accessed.
 
 \paragraph{Context-Sensitive Types}
 
@@ -101,9 +101,9 @@ Base Class & Member Function & Description \tabularnewline
 \hline
 \multicolumn{3}{l}{Spiffy File System Library}\tabularnewline
 \hline 
-Entity & \texttt{int accept\_fields(Visitor \& v)} & allows \textit{v} to visit all fields of this object \tabularnewline
- & \texttt{int accept\_pointers(Visitor \& v)} & allows \textit{v} to visit all pointer fields of this object \tabularnewline
- & \texttt{int accept\_by\_type(int t, Visitor \& v)} & allows \textit{v} to visit all structures of type \textit{t} \tabularnewline 
+Entity & \texttt{int process\_fields(Visitor \& v)} & allows \textit{v} to visit all fields of this object \tabularnewline
+ & \texttt{int process\_pointers(Visitor \& v)} & allows \textit{v} to visit all pointer fields of this object \tabularnewline
+ & \texttt{int process\_by\_type(int t, Visitor \& v)} & allows \textit{v} to visit all structures of type \textit{t} \tabularnewline 
 \hline 
 Pointer & \texttt{Entity * fetch()} & retrieves the pointed-to container from disk \tabularnewline
 \hline
@@ -140,9 +140,9 @@ Table~\ref{tab:library-api} shows a subset of the API for building Spiffy applic
 
 The Spiffy library uses the visitor pattern~\cite{gamma1995design} so that a programmer can customize the operations performed on each file system metadata type by implementing the \texttt{visit} function of the abstract base class \texttt{Visitor}.
 
-%The \texttt{Entity} base class provides a common interface for all metadata, including objects (structures, vectors, fields), pointers, containers and extents. The \texttt{accept\_pointers} function invokes the \texttt{visit} function of an application-defined Visitor on each pointer within the entity.
+%The \texttt{Entity} base class provides a common interface for all metadata, including objects (structures, vectors, fields), pointers, containers and extents. The \texttt{process\_pointers} function invokes the \texttt{visit} function of an application-defined Visitor on each pointer within the entity.
 
-The \texttt{Entity} base class provides a common interface for all metadata structures their fields. The \texttt{accept\_pointers} function invokes the \texttt{visit} function of an application-defined Visitor class on each pointer within the entity. \texttt{accept\_by\_type} allows visit of specified structure type reachable from the entity. Unlike the previous two versions of accept, \texttt{accept\_by\_type} will automatically follow pointers. Thus, for example, invoking \texttt{accept\_by\_type} on the super block with inode structure as the argument will result in all inodes in the file system being visited.
+The \texttt{Entity} base class provides a common interface for all metadata structures their fields. The \texttt{process\_pointers} function invokes the \texttt{visit} function of an application-defined Visitor class on each pointer within the entity. \texttt{process\_by\_type} allows visit of specified structure type reachable from the entity. Unlike the other two process functions, \texttt{process\_by\_type} will automatically follow pointers. Thus, for example, invoking \texttt{process\_by\_type} on the super block with the inode structure as input argument will result in visiting all inodes in the file system.
 
 Every container (and extent) has an address associated with it that allows accessing the container from disk. Figure~\ref{fig:address-struct} shows the format of an address, consisting of an address space, an identifier and an offset within the address space, and the size of the container. The offset field is used when a container belongs to an extent.
 
@@ -212,7 +212,7 @@ With online interpretation, the application already has the buffer containing th
 
 Figure~\ref{fig:fs-traversal-example} shows a sample application built using the Spiffy API. This application prints the type of each metadata block in an Ext4 file system in depth-first order. The \texttt{Ext4IO} class implements the block and the file address space, as described later in Section~\ref{sec:Implementation}. The program starts by invoking \texttt{fetch\_super}, which fetches the super block from a known location on disk and parses it. Then it uses two mutually recursive visitors, \texttt{EntVisitor} and \texttt{PtrVisitor}, to traverse the file system.
 
-The \texttt{EntVisitor::visit} function takes an entity as input, prints its name, and then invokes \texttt{accept\_pointers}, which calls the \texttt{PtrVisitor::visit} function for every pointer in the entity. The \texttt{PtrVisitor::visit} function invokes \texttt{fetch}, which fetches the pointed-to entity from disk, and invokes \texttt{EntVisitor::visit} on it.
+The \texttt{EntVisitor::visit} function takes an entity as input, prints its name, and then invokes \texttt{process\_pointers}, which calls the \texttt{PtrVisitor::visit} function for every pointer in the entity. The \texttt{PtrVisitor::visit} function invokes \texttt{fetch}, which fetches the pointed-to entity from disk, and invokes \texttt{EntVisitor::visit} on it.
 
 \begin{figure}
 \begin{lstlisting}
@@ -227,8 +227,8 @@ int PtrVisitor::visit(Entity & e) {
   return 0;
 }
 int EntVisitor::visit(Entity & e) {
-  cout << e.get_type().name << endl;
-  return e.accept_pointers(pv);
+  cout << e.get_name() << endl;
+  return e.process_pointers(pv);
 }
 void main(void) {
   Ext4IO io("/dev/sdb1");
@@ -245,4 +245,3 @@ void main(void) {
 \vspace{-5pt}
 \end{figure}
 
-Consider another application that shows file-system fragmentation by plotting a histogram of the size of free extents in the file system. This application will require file-system specific logic depending on how free space is represented, e.g., bitmaps for Ext4, and used space extents for Btrfs. This logic is implemented by modifying the code shown in Figure~\ref{fig:fs-traversal-example} with custom visit functions for just these structures, while the rest of the code in the application will be common across file systems.
