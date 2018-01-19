@@ -183,6 +183,8 @@ Entity * IBlockPtr::fetch() {
 
 %% During initialization, pointer fields set up the address space, size, and offset of its Address object ( see Figure~\ref{fig:address-struct}), which are known information provided by the annotations. During parsing, the pointer field gets the \texttt{id} associated with the address, which enables the actual fetch. This function works by creating a temporary buffer and use the \texttt{IO} object associated the file system to perform the actual disk access.
 
+\iffalse
+% For saving space
 \begin{figure}
 \begin{lstlisting}
 int Container::save(bool alloc) {
@@ -200,12 +202,16 @@ int Container::save(bool alloc) {
 \caption{\label{fig:object-save}Abbreviated version of the \texttt{save} function.}
 \vspace{-5pt}
 \end{figure}
+\fi
 
-Figure~\ref{fig:object-save} shows the \texttt{save} function for writing a container to disk. The function serializes the container by invoking nested serialization on its fields. Then, it invokes the \texttt{alloc} function for newly created metadata, or when existing metadata has to be reallocated (e.g., copy-on-write allocator). The allocator finds a new address for the container and updates any metadata that tracks allocation (e.g., the Ext4 block bitmap). If the address passes placement constraint checks, the buffer is written to disk.
+%% Figure~\ref{fig:object-save} shows the \texttt{save} function for writing a container to disk. The function serializes the container by invoking nested
+
+The \texttt{save} function serializes a container by invoking nested serialization on its fields. Then, it invokes the \texttt{alloc} function for newly created metadata, or when existing metadata has to be reallocated (e.g., copy-on-write allocator). The allocator finds a new address for the container and updates any metadata that tracks allocation (e.g., the Ext4 block bitmap). If the address passes placement constraint checks, the buffer is written to disk.
 
 %% For an application that creates new metadata, it should use the \texttt{create\_object} function. The \texttt{Path} object contains a list of cross structure references that the object may need during parsing. For example, when creating a directory block, the programmer needs to decide which inode the block belongs to, and appropriately assign it to the \texttt{Path} object.
 
 The \texttt{create\_container} function constructs empty containers of a given type. The application developer can then fill the container with data and invoke \texttt{save} to allocate and write the newly created container to disk.
+
 With online interpretation, the application already has the buffer containing the metadata, knows its type, and just needs to parse it. The \texttt{parse\_by\_type} factory function allows the programmer to bypass the \texttt{fetch} function and allows parsing of arbitrary buffers and constructing the corresponding containers, without the need for an \texttt{IO} object to read data from disk.
 
 \subsection{Building Applications\label{subsec:Building-Applications}}
