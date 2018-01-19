@@ -214,8 +214,6 @@ The \texttt{save} function serializes a container by invoking nested serializati
 
 The \texttt{create\_container} function constructs empty containers of a given type. The application developer can then fill the container with data and invoke \texttt{save} to allocate and write the newly created container to disk.
 
-With online interpretation, the application already has the buffer containing the metadata, knows its type, and just needs to parse it. The \texttt{parse\_by\_type} factory function allows the programmer to bypass the \texttt{fetch} function and allows parsing of arbitrary buffers and constructing the corresponding containers, without the need for an \texttt{IO} object to read data from disk.
-
 \subsection{Building Applications\label{subsec:Building-Applications}}
 
 Figure~\ref{fig:fs-traversal-example} shows a sample application built using the Spiffy API. This application prints the type of each metadata block in an Ext4 file system in depth-first order. The \texttt{Ext4IO} class implements the block and the file address space, as described later in Section~\ref{sec:Implementation}. The program starts by invoking \texttt{fetch\_super}, which fetches the super block from a known location on disk and parses it. Then it uses two mutually recursive visitors, \texttt{EntVisitor} and \texttt{PtrVisitor}, to traverse the file system.
