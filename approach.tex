@@ -21,7 +21,7 @@ After a file system developer annotates their file system's data structures, we 
 %For example, the application may wish to operate on the directory entries of a file system (e.g. to build a snapshot of the file system's namespace). A developer using Spiffy would write a function for each file system's "directory entry" structure, which invokes a file-system agnostic function to record the file name, or any other pertinent information. In order to optimize file system traversal, the developer could also write decision making code for other objects to determine whether to prune the traversal of some pointers within the file system. (e.g., for Btrfs, directory entries only exist within B-trees of some particular IDs) In contrast, a manually written application requires file-system specific code to traverse the file system, loading and validating data structures, and parsing directory entries before being able to invoke any application-specific code.
 % actually invoking any application-specific code, namely, recording the file name in the directory entry.
 
-Our annotation-based approach offers several advantages. First, it provides a concise and clear documentation of the file system's format.  Second, our generated libraries enable rapid-prototyping of file-system aware storage applications. The libraries provide a uniform API, easing the development of applications that work across file systems so that the programmer can focus on the logic and not the format of the file systems. Third, our approach requires minimal changes to the file system source code (the annotations are only in the C header files, and are backwards compatible with existing binary code), reducing the chance of introducing file system bugs. For example, differentiated storage services~\cite{Mesnier2011} was implemented by modifying the file system and the kernel's storage stack to enable I/O classification.  With our approach, this application can be implemented by using introspection at the block layer for an unmodified file system, or at the hypervisor for an existing virtual machine. Finally, file system formats are known to be stable over time, so there is minimal cost for maintaining annotations. When format changes do occur, the specifications and only the file-system specific code that operates on the updated metadata structures, will need to be updated.
+Our annotation-based approach offers several advantages. First, it provides a concise and clear documentation of the file system's format.  Second, our generated libraries enable rapid-prototyping of file-system aware storage applications. The libraries provide a uniform API, easing the development of applications that work across file systems so that the programmer can focus on the logic and not the format of the file systems. Third, our approach requires minimal changes to the file system source code (the annotations are only in the C header files, and are backwards compatible with existing binary code), reducing the chance of introducing file system bugs. For example, differentiated storage services~\cite{Mesnier2011} was implemented by modifying the file system and the kernel's storage stack to enable I/O classification.  With our approach, this application can be implemented by using introspection at the block layer for an unmodified file system, or at the hypervisor for an existing virtual machine. Finally, file system formats are known to be stable over time, so there is minimal cost for maintaining annotations.
 
 \subsection{Designing Annotations\label{subsec:Annotation-Design}}
 
@@ -184,7 +184,7 @@ Entity * IBlockPtr::fetch() {
 %% During initialization, pointer fields set up the address space, size, and offset of its Address object ( see Figure~\ref{fig:address-struct}), which are known information provided by the annotations. During parsing, the pointer field gets the \texttt{id} associated with the address, which enables the actual fetch. This function works by creating a temporary buffer and use the \texttt{IO} object associated the file system to perform the actual disk access.
 
 \iffalse
-% For saving space
+% Ashvin - for saving space
 \begin{figure}
 \begin{lstlisting}
 int Container::save(bool alloc) {
@@ -204,7 +204,7 @@ int Container::save(bool alloc) {
 \end{figure}
 \fi
 
-%% Figure~\ref{fig:object-save} shows the \texttt{save} function for writing a container to disk. The function serializes the container by invoking nested
+%% Ashvin - Figure~\ref{fig:object-save} shows the \texttt{save} function for writing a container to disk. The function serializes the container by invoking nested
 
 The \texttt{save} function serializes a container by invoking nested serialization on its fields. Then, it invokes the \texttt{alloc} function for newly created metadata, or when existing metadata has to be reallocated (e.g., copy-on-write allocator). The allocator finds a new address for the container and updates any metadata that tracks allocation (e.g., the Ext4 block bitmap). If the address passes placement constraint checks, the buffer is written to disk.
 
@@ -251,3 +251,18 @@ void main(void) {
 \vspace{-5pt}
 \end{figure}
 
+\subsection{Limitations\label{subsec:spiffy_limitation}}
+
+The correctness of Spiffy applications depends on correctly written annotations. Therefore, if and when file system format changes do occur, the specifications will need to be updated. In addition, Spiffy applications will also need to update all file-system specific code that is affected by the format changes. These changes will likely only affect code that directly operates on the updated metadata structures, since the Spiffy library will take care of safe traversal and parsing of any intermediate structures.
+
+Unlike typical file-system applications that operate at the VFS layer and are file-system independent, Spiffy applications operate directly on file-system specific structures and are thus file-system dependent. Since file systems share common abstractions (e.g. files, directories, inodes), it may be possible to carefully abstract the functionality that is shared between implementations, reducing file-system dependence even further.
+
+%% Ashvin - unless we have specific examples of problems, I would like to avoid mentioning this right now.
+%%
+%% We also assume that any context-sensitive interpretations can be performed by a function or expression free of side effects.
+
+%% Ashvin - I don't see this as an assumption because I can't imagine how a
+%% file system will break this assumption. Moreover, we actually handle writes
+%% where we initially don't know their types.
+
+%% We assume that the interpretation of a piece of file system metadata does not depend on the interpretation of children reached by traversing that same metadata.
