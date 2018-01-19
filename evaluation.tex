@@ -59,13 +59,37 @@ In this section, we evaluate the effort required to develop Spiffy applications.
 
 \noindent\textbf{Prioritized Cache:} The original Bcache code consisted of 10518 lines of code. To implement prioritized caching we added 289 lines to this code, which invokes our generic runtime metadata interpretation framework, consisting of 2158 lines of code. This framework provides hooks to specify file-system specific policies. Our Ext4-specific policy requires 111 lines of code, and the Btrfs-specific policy requires 134 lines of code. Currently, we have not implemented prioritized caching for F2FS, which would require tracking NAT entries, similar to how we track inode numbers for Btrfs to find their file extents.
 
+\begin{table*}
+\small
+\begin{centering}
+\begin{tabular}{|c|c|c|l|}
+\hline 
+Tool Name & Structure & Field & Description \tabularnewline
+\hline 
+\hline 
+dumpe2fs & super block & \texttt{s\_creator\_os} & index out of bound error during OS name lookup \tabularnewline
+\hline 
+dump.f2fs & super block & \texttt{log\_blocks\_per\_seg} & index out of bound error while building nat bitmap \tabularnewline
+ & super block & \texttt{segment\_count\_main} & null pointer dereference after calloc fails \tabularnewline
+ & super block & \texttt{cp\_blkaddr} & double free error during error handling (no valid checkpoint) \tabularnewline
+ & summary block & \texttt{n\_nats} & index out of bound error during nid lookup \tabularnewline
+ & inode & \texttt{i\_namelen} & index out of bound error when adding null character to end of name \tabularnewline
+\hline 
+\end{tabular}
+\par\end{centering}
+\vspace{-5pt}
+\caption{\label{tab:corruption-result}List of segmentation faults found during type-specific corruption experiments.}
+\vspace{-5pt}
+\end{table*}
+
 \subsection{Corruption Experiments\label{subsec:corruption_experiment}}
 
 We use our type-specific corruption tool to evaluate the robustness of Spiffy generated libraries. We ran a series of type-specific corruption experiments on existing file system dump tools and the Spiffy dump tool. The type-specific corruption experiment takes a 128MB file system image filled with 12000 tiny files (less than 4 bytes) and some directories, then corrupts a specific field of a selected instance of a specified type (e.g., one of the inode structures). The field is either corrupted to a random value or to zero.
 
 The Spiffy dump tool was able to generate correctly formatted XML files in the face of arbitrary single-field corruptions. When corruption is detected during the parsing of a container or a pointer fetch (i.e., pointer address is out-of-bound or fails a placement constraint), an error is printed and the program stops the traversal process.
 
-We also run the same corrupted images on existing tools. For dumpe2fs (dump tool for Ext4) v1.42.13, we found a single crash when the \texttt{s\_creator\_os} field of the super block is corrupted. For dump.f2fs v1.6.1-1, we observed 6 instances of abnormal program termination, including assertion errors and segmentation faults. Four of the crashes were due to corruption in the super block, and one crash each was detected for the checkpoint and inode structures. We were unable to trigger any crash-related bugs in btrfs-debug-tree v4.4.
+We also run the same corrupted images on existing tools. Table~\ref{tab:corruption-result} 
+describes the crashes we found during the experiments. For dumpe2fs (dump tool for Ext4) v1.42.13, we found a single crash when the \texttt{s\_creator\_os} field of the super block is corrupted. For dump.f2fs v1.6.1-1, we observed 5 instances of segmentation faults and multiple cases of assertion errors. Three of the crashes were due to corruption in the super block, and one crash each was detected for the summary block and inode structures. We were unable to trigger any crash-related bugs in btrfs-debug-tree v4.4.
 
 These results are expected since F2FS is a relatively young file system. Btrfs applies metadata checksumming technique to avoid metadata corruption, and thus requires correlated corruption where a metadata field is corrupted and somehow the metadata block passes checksum verification.  Lastly, Ext4, being the most battle-tested file system for Linux, has hardened itself against various forms of corruption. It is encouraging that a Spiffy application is more robust than dumpe2fs without requiring maturity or significant testing effort.
 

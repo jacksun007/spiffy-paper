@@ -16,7 +16,7 @@ The type-specific corruption tool is a variant of the dump tool that can inject 
 
 \paragraph*{Free Space Tool}
 
-The free space tool shows file-system fragmentation by plotting a histogram of the size of free extents in the file system. The tool retrieves the metadata structures that store free space information and processes them, e.g., block bitmaps for Ext4, extent items for Btrfs, and segment information table (SIT) for F2FS. This logic is implemented by using \texttt{process\_by\_type}, described in Table~\ref{library-api}, and a custom visit function that conveniently processes all the retrieved metadata structures, without the need to write code to manually traverse the file system and parse intermediate structures. The rest of the code in the application is common across file systems.
+The free space tool shows file-system fragmentation by plotting a histogram of the size of free extents in the file system. The tool retrieves the metadata structures that store free space information and processes them, e.g., block bitmaps for Ext4, extent items for Btrfs, and segment information table (SIT) for F2FS. This logic is implemented by using \texttt{process\_by\_type}, described in Table~\ref{tab:library-api}, and a custom visit function that conveniently processes all the retrieved metadata structures, without the need to write code to manually traverse the file system and parse intermediate structures. The rest of the code in the application is common across file systems.
 
 %% The free space tool displays the offsets and sizes of all free space extents in a file system image. A histogram of the free extent counts is also displayed, with power of two bin sizes.
 
