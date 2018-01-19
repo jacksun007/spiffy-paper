@@ -1,3 +1,5 @@
+#!/bin/sh
+
 # run these commands on Linux machine
 
 git checkout master
@@ -9,5 +11,5 @@ latexpand paper.tex > paper-full-orig.tex
 git checkout master
 
 latexdiff paper-full-orig.tex paper-full.tex > paper-diff.tex
-latexmk -f -pdf paper-diff.tex
+latexmk -f -pdf -pdflatex="pdflatex -interaction=nonstopmode" -use-make paper-diff.tex
 
