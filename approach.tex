@@ -58,7 +58,9 @@ where the address maps to a physical block location that contains a contiguous d
 
 Our design incorporates this requirement by associating an \emph{address space} with each file system pointer. Each address space specifies a mapping of its addresses to physical locations. In the case of the Ext4 journal, we use the inode number, which uniquely identifies files in Unix file systems, as an address in the file address space.
 
-Multiple pointers may refer to the same structure. For example, the block group descriptor tables in Ext4 refer to inode tables, which have inode structures in them. Similarly, directory entries have an inode number that also refer to these inode structures, as shown in Figure~\ref{fig:ext4_dirent}. We prefer to annotate the descriptor tables with a block type pointer because the inode table can then be viewed as a contiguous structure. Annotating the inode number is possible, but will require the annotation developer to implement an inode address space for mapping inode numbers to inode structures.
+%% Ashvin - not sure what is the best way to explain this.
+%% perhaps use f2fs example?
+%Multiple pointers may refer to the same structure. For example, the block group descriptor tables in Ext4 refer to inode tables, which have inode structures in them. Similarly, directory entries have an inode number that also refer to these inode structures, as shown in Figure~\ref{fig:ext4_dirent}. We prefer to annotate the descriptor tables with a block type pointer because the inode table can then be viewed as a contiguous structure. Annotating the inode number is possible, but will require the annotation developer to implement an inode address space for mapping inode numbers to inode structures.
 
 
 \paragraph{Cross-Structure Dependencies}
