@@ -65,4 +65,6 @@ to reflect its current format. While this appears to involve some work, it will 
 less than updating a set of manually-written tools since robust parsing
 and serialization routines are already provided by the library.
 
+Our annotation strategy makes two assumptions about file systems. We assume that the interpretation of a piece of file system metadata does not depend on the interpretation of children reached by traversing that same metadata. We also assume that any context-sensitive interpretations can be performed by a function or expression free of side effects.
+
 

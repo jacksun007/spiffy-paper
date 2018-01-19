@@ -61,14 +61,10 @@ Many file-system applications such as defragmentation tools, file system checker
 % (jsun): don't really like the above sentence. Not sure if it emphasized the point that we could lower 
 % the bar for building fs apps by making it eaiser to work with fs metadata.
 
-We propose Spiffy, an annotation language for specifying the on-disk format of a file system. File-system developers annotate the data structures of a file system, and we use these annotations to generate a library that allows identifying, parsing and traversing file-system metadata, providing support for both offline and online storage applications. Our approach simplifies the development of these applications by providing an interface that work across different file systems, which simplifies the the building of a generic framework for the application and thus reduces the amount of file-system specific code that developers must write.
+We propose Spiffy, an annotation language for specifying the on-disk format of a file system. File-system developers annotate the data structures of a file system, and we use these annotations to generate a library that allows identifying, parsing and traversing file-system metadata, providing support for both offline and online storage applications. This approach simplifies the development of applications that work across different file systems because it reduces the amount of file-system specific code that needs to be written.
 
-% and thus making it easier to write applications . 
-We have written annotations for the Linux Ext4, Btrfs and F2FS file systems, and developed four applications that work for these file systems: an offline file system dump tool, a free space reporter, a file system converter, and an online storage layer cache that preferentially caches files for certain users. 
-Our experiments show that applications that use the library to access file system metadata can achieve good performance.
-% (jsun): this statement seems inaccurate because only fs conversion tool is compared
-% against existing implementation
-%Our experiments show that these applications can achieve performance similar to existing implementations.
+We have written annotations for the Linux Ext4, Btrfs and F2FS file systems, and developed several applications for these file systems, including a file system dump tool, a file system converter, and an online storage layer cache that preferentially caches files for certain users. Our experiments show that applications that use the library to access file system metadata can achieve good performance and are robust against file system corruption errors.
+
 \end{abstract}
 
 \input{introduction.tex}
