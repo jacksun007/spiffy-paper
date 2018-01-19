@@ -66,16 +66,20 @@
 % (jsun): intentionally modified to reduce space
 %
 \def\@maketitle{\newpage
- \vbox to 1in{
+ \vbox to 1.25in{
+ \vspace*{\fill}
+% \vskip 2em
  \begin{center}%
-  \vspace{-1in}
   {\Large\bf \@title \par}%
-  \vspace{-.25in}
+%  \vspace{-.25in}
+  \vskip 0.175in minus 0.300in
   {\large\it
+   \lineskip 0.5em
    \begin{tabular}[t]{c}\@author
    \end{tabular}\par}%
  \end{center}%
  \par
+ \vspace*{\fill}
 % \vskip 1.5em
  }
 }
