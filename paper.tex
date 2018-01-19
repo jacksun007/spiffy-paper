@@ -75,21 +75,11 @@ We have written annotations for the Linux Ext4, Btrfs and F2FS file systems, and
 \input{evaluation.tex}
 \input{related_work.tex}
 
-\section{Future Work\label{sec:Future_Work}}
-In the current version of our file system conversion tool, a power failure 
-while overwriting the metadata of the source file system would permanently
-corrupt it. We plan to add failure atomicity to the tool in the next iteration.
+%\section{Future Work\label{sec:Future_Work}}
 
-Spiffy currently has no semantic understanding of file system metadata, 
-which requires application developers to write file-system specific code.
-However, there are common concepts between file system such as the notion of
-files and directories, and the allocation of blocks, even though each file
-system may choose different format to represent these concepts.
-To bridge the semantic gap, we are working on a new interface which enables writing
-truly file-system agnostic applications by identifying these commonalities.
-Application developers can use the interface to perform tasks such as 
-allocating a new block, and copying content to it, all without knowing the
-underlying file system implementation.
+%In the current version of our file system conversion tool, a power failure while overwriting the metadata of the source file system would permanently corrupt it. We plan to add failure atomicity to the tool in the next iteration.
+
+%Spiffy currently has no semantic understanding of file system metadata, which requires application developers to write file-system specific code.  However, there are common concepts between file system such as the notion of files and directories, and the allocation of blocks, even though each file system may choose different format to represent these concepts.  To bridge the semantic gap, we are working on a new interface which enables writing truly file-system agnostic applications by identifying these commonalities.  Application developers can use the interface to perform tasks such as allocating a new block, and copying content to it, all without knowing the underlying file system implementation.
 
 \section{Conclusion\label{sec:Conclusion}}
 
