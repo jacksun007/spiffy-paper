@@ -97,20 +97,47 @@ Incidentally, we also tried an extensive set of random corruption experiments, a
 
 \subsection{File System Conversion Performance\label{subsec:fsconvert_performance}}
 
-\begin{table*}
-\begin{centering}
-\begin{tabular}{|c|c|c|c|c|}
-\hline 
-\# of files & 20000 & 5000 & 1000 & 100 \tabularnewline
+%
+% (jsun): REMOVED for FAST submission. 
+%
+%\begin{table*}
+%\begin{centering}
+%\begin{tabular}{|c|c|c|c|c|}
+%\hline 
+%\# of files & 20000 & 5000 & 1000 & 100 \tabularnewline
 %\hline
 %File set size & 16.12GB & 16.27GB & 16.13GB & 16.27GB \tabularnewline
+%\hline 
+%\hline 
+%Copy Convertor & $188.17 \pm 3.65$s & $190.28 \pm 2.15$s & $192.74 \pm 2.28$s & $195.11 \pm 0.18$s %\tabularnewline
+%\hline 
+%Manual Converter & $6.55\pm 0.53$s & $3.46 \pm 0.17$s & $3.29 \pm 0.11$s & $3.25 \pm 0.11$s \tabularnewline
+%\hline 
+%Spiffy Converter & $7.03 \pm 0.2$s & $4.01 \pm 0.09$s & $3.84 \pm 0.03$s & $3.71 \pm 0.13$s\tabularnewline
+%\hline 
+%\end{tabular}
+%\par\end{centering}
+%\vspace{-5pt}
+%\caption{\label{tab:fsconvert-result}Time required for each technique to convert 
+%from Ext4 to F2FS for different number of files.}
+%\vspace{-5pt}
+%\end{table*}
+
+\begin{table}
+\small
+\begin{centering}
+\begin{tabular}{|c|c|c|c|}
+\hline 
+\# files & Copy Converter & Manual Conv. & Spiffy Conv. \tabularnewline
+%\hline
+%File set size & 16.12GB & 16.13GB & 16.27GB \tabularnewline
 \hline 
 \hline 
-Copy Convertor & $188.17 \pm 3.65$s & $190.28 \pm 2.15$s & $192.74 \pm 2.28$s & $195.11 \pm 0.18$s \tabularnewline
+20000 & $188.2 \pm 3.7$s & $6.6\pm 0.5$s  & $7.0 \pm 0.2$s \tabularnewline
 \hline 
-Manual Converter & $6.55\pm 0.53$s & $3.46 \pm 0.17$s & $3.29 \pm 0.11$s & $3.25 \pm 0.11$s \tabularnewline
+1000 & $192.7 \pm 2.3$s & $3.3 \pm 0.1$s & $3.8 \pm 0.0$s \tabularnewline
 \hline 
-Spiffy Converter & $7.03 \pm 0.2$s & $4.01 \pm 0.09$s & $3.84 \pm 0.03$s & $3.71 \pm 0.13$s\tabularnewline
+100 & $195.1 \pm 0.2$s & $3.3 \pm 0.1$s & $3.7 \pm 0.1$s\tabularnewline
 \hline 
 \end{tabular}
 \par\end{centering}
@@ -118,11 +145,12 @@ Spiffy Converter & $7.03 \pm 0.2$s & $4.01 \pm 0.09$s & $3.84 \pm 0.03$s & $3.71
 \caption{\label{tab:fsconvert-result}Time required for each technique to convert 
 from Ext4 to F2FS for different number of files.}
 \vspace{-5pt}
-\end{table*}
+\end{table}
 
 We compare the time it takes to perform copy-based conversion, versus using the Spiffy-based and the manually written in-place file-system conversion tools. The results are shown in Table \ref{tab:fsconvert-result}. The experiments are run on an Intel 510 Series SATA SSD.  We create the file set using Filebench 1.5-a3~\cite{wilson2008new} in an Ext4 partition on the SSD, and then convert the partition to F2FS. The 20K file set uses the \texttt{msnfs} file size distribution with the largest file size up to 1GB. The rest of the file sets have progressively fewer small files. All file sets have a total size of 16GB. For the copy converter, we run \texttt{tar -aR} at the root of the SSD partition and save the tar file on a separate local disk. We then reformat the SSD partition and extract the file set back into the partition.
 
-The copy converter requires transferring two full copies of the file set, and so it takes 30 to 50 times longer than using the conversion tools, which only need to move data blocks out of F2FS's static metadata area and then create the corresponding F2FS metadata. Both conversion tools take longer time with  larger filesets since they need to handle the conversion of more file system metadata. The library-assisted conversion tool performs reasonably compared to its manually-written counterpart, with at most a 16.7\% overhead for the added type-safety protection that the library offers. This shows the feasibility of using the library for general use when working with file system metadata. 
+
+The copy converter requires transferring two full copies of the file set, and so it takes 30 to 50 times longer than using the conversion tools, which only need to move data blocks out of F2FS's static metadata area and then create the corresponding F2FS metadata. Both conversion tools take longer time with larger filesets since they need to handle the conversion of more file system metadata. The library-assisted conversion tool performs reasonably compared to its manually-written counterpart, with at most a 16.7\% overhead for the added type-safety protection that the library offers. This shows the feasibility of using the library for general use when working with file system metadata. 
 
 %
 % Jack: should we talk about why mount-and-copy does slightly better with more small files?

@@ -37,26 +37,29 @@ Our tool currently supports converting extent-based Ext4 file systems to log-str
 
 Fortunately, various pieces of the code can be reused for different combinations of source and destination file system when adapting new file systems. As an example, only the code to copy Btrfs metadata from an existing file system and to list its free space is required to support the conversion from Btrfs to F2FS, since the in-memory data structures are generic across file systems that support VFS. If the file system does not support VFS, suitable default values can be used, which would be helpful for upgrading from a legacy file system such as FAT32.
 
-\begin{figure}[t]
-\begin{lstlisting}
-class Ext4DirEntry : public Entity {
-  Ext4DirEntry() :
-    inode("inode", "__le32"),
-    ...
-    name("name", "char []", *this) {}
-public:
-  Integer<__le32> inode;
-  Integer<__le16> rec_len;
-  Integer<__u16>  name_len;        
-  Vector<char>    name;
-  ...
-};
-\end{lstlisting}
-\vspace{-12pt}
-\caption{\label{fig:ext3_dirent_library_wrapper}Wrapper class for Ext4 directory
-entry.}
-\vspace{-8pt}
-\end{figure}
+%
+% (jsun): REMOVED for FAST submission
+%
+%\begin{figure}[t]
+%\begin{lstlisting}
+%class Ext4DirEntry : public Entity {
+%  Ext4DirEntry() :
+%    inode("inode", "__le32"),
+%    ...
+%    name("name", "char []", *this) {}
+%public:
+%  Integer<__le32> inode;
+%  Integer<__le16> rec_len;
+%  Integer<__u16>  name_len;        
+%  Vector<char>    name;
+%  ...
+%};
+%\end{lstlisting}
+%\vspace{-12pt}
+%\caption{\label{fig:ext3_dirent_library_wrapper}Wrapper class for Ext4 directory
+%entry.}
+%\vspace{-8pt}
+%\end{figure}
 
 \paragraph{Prioritized Block Layer Cache}
 
