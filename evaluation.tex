@@ -43,7 +43,7 @@ The last column is listed as $A+B+C$, with $A$ showing no modification to the da
 \item We break down structures that benefit from being declared as conditionally
 inherited types. For example, \texttt{btrfs\_file\_extent\_item}
 is split into two parts: the header and an optional footer, depending on
-whether it contains inline data or extent information for data.
+whether it contains inline data or extent information.% for data.
 \item Simple structures such as Ext4 extent metadata blocks, are not declared in
 the original source code. However, for annotation purposes, they need
 to be explicitly declared. All of the added structures in Ext4 belong
