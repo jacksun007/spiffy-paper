@@ -14,9 +14,9 @@ to resize an NTFS partition.
 
 \item Ext2/3/4 inodes contain union fields for storing operating system specific metadata. Unfortunately, a sanity check was omitted in e2fsck prior to accessing this field, causing erroneous repairs to be performed when the creator OS is not Linux. Consequently, the file system becomes corrupted for Hurd and possibly other operating systems.
 
-\item A fuzzer that generates test cases that trigger different internal states of its target binary~\cite{AmericanFuzzyLop} was able to craft corrupted super blocks that would crash the Btrfsck tool. In response, Btrfs developers added 15 extra checks (for a total of 17 checks) to the super block parsing code.
+\item A fuzzer that generates test cases to trigger different internal states of its target binary~\cite{AmericanFuzzyLop} was able to craft corrupted super blocks that would crash the Btrfsck tool. In response, Btrfs developers added 15 extra checks (for a total of 17 checks) to the super block parsing code.
 
-\item When the skinny metadata feature was added to Btrfs, the developers neglected to also patch Btrfsck, resulting in false error reports. This bug shows the difficulty of keeping all relevant applications up-to-date with changing file system formats.
+%\item When the skinny metadata feature was added to Btrfs, the developers neglected to also patch Btrfsck, resulting in false error reports. This bug shows the difficulty of keeping all relevant applications up-to-date with changing file system formats.
 \end{enumerate}
 
 The common theme among all these bugs is that: 1) they are simple errors that occur because they require a detailed understanding of the file system format; 2) they can cause serious data loss or corruption; and 3) most of these bugs were fixed in less than 5 lines of code. Our domain-specific language allows generating libraries that can automatically sanitize file system metadata by checking various structural constraints before it is accessed in memory. In the presence of corrupted metadata, our libraries generate error codes, rather than crashing the tools, or propagating the corruption further.

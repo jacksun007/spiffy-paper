@@ -30,7 +30,12 @@ structure annotation effort.}
 
 Table~\ref{tab:loc-struct} shows the effort required to correctly annotate the Ext4, Btrfs and F2FS file systems. The second column shows the number of lines of code of existing on-disk data structures in these file systems. The lines of code count was obtained using \texttt{cloc}~\cite{danial2009cloc} to eliminate comments and empty lines. The third column shows the number of annotation lines. This number is less than one-third of the total line count for all the file systems.
 
-The last column is listed as $A+B+C$, with $A$ showing no modification to the data structure (other than adding annotations), $B$ showing the number of data structures that were added,\footnote{We consider the vector type to be an annotation and not a structure for this calculation.} and $C$ showing the number of data structures that needed to be modified. Structure declarations needed to be added or modified for three reasons:
+%
+% (angela): makes no sense without the anntation language section
+%
+% \footnote{We consider the vector type to be an annotation and not a structure for this calculation.}
+
+The last column is listed as $A+B+C$, with $A$ showing no modification to the data structure (other than adding annotations), $B$ showing the number of data structures that were added, and $C$ showing the number of data structures that needed to be modified. Structure declarations needed to be added or modified for three reasons:
 %
 \begin{enumerate}[leftmargin=0.15in,itemsep=-0.5ex]
 \item We break down structures that benefit from being declared as conditionally

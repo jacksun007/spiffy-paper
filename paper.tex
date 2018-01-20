@@ -52,7 +52,7 @@
 \begin{document}
 \title{\Large \bf Spiffy: Enabling File-System Aware Storage Applications}
 \author{
-  {\rm Kuei Sun, Daniel Fryer, Matthew Lakier, Angela Demke Brown and Ashvin Goel}\\
+  {\rm Kuei Sun, Daniel Fryer, Matthew Lakier, Joseph Chu, Angela Demke Brown and Ashvin Goel}\\
   University of Toronto
 %  \and
 %      {\rm Daniel Fryer}\\
@@ -79,7 +79,11 @@ Many file-system applications such as defragmentation tools, file system checker
 
 We propose Spiffy, an annotation language for specifying the on-disk format of a file system. File-system developers annotate the data structures of a file system, and we use these annotations to generate a library that allows identifying, parsing and traversing file-system metadata, providing support for both offline and online storage applications. This approach simplifies the development of storage applications that work across different file systems because it reduces the amount of file-system specific code that needs to be written.
 
-We have written annotations for the Linux Ext4, Btrfs and F2FS file systems, and developed several applications for these file systems, including a file system dump tool, a file system converter, and an online storage layer cache that preferentially caches files for certain users. Our experiments show that applications that use the library to access file system metadata can achieve good performance and are robust against file system corruption errors.
+%
+% (jsun): don't actually need to itemize all of the tools, just the cool ones
+%
+We have written annotations for the Linux Ext4, Btrfs and F2FS file systems, and developed several applications for these file systems, including a type-specific metadata corruptor, a file system converter, and an online storage layer cache that preferentially caches files for certain users. 
+Our experiments show that applications that use the library to access file system metadata can achieve good performance and are robust against file system corruption errors.
 
 \end{abstract}
 

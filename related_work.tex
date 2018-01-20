@@ -16,10 +16,12 @@ single packet or file, and so it does not support references to external objects
 
 Several projects have explored C extensions for expressing additional semantic information~\cite{Necula2002,zhou2006safedrive,torvalds2007sparse}. CCured~\cite{Necula2002} enables type and memory safety, and the Deputy Type System~\cite{zhou2006safedrive} prevents out-of-bound array errors. Both projects annotate source code, perform static analysis, and add runtime checks, but they are designed for in-memory structures.
 
-Symbolic execution~\cite{cadar2008exe}, model checking~\cite{yang2006using} and fuzz-testing~\cite{AmericanFuzzyLop} have been used to find file system bugs. 
+%
+% (jsun): REMOVED for FAST submission
+%
+%Symbolic execution~\cite{cadar2008exe}, model checking~\cite{yang2006using} and fuzz-testing~\cite{AmericanFuzzyLop} have been used to find file system bugs. 
 %These approaches involve discovering bugs by either using static analysis or by crafting inputs that would trigger faulty corner cases. 
-In contrast, we proactively avoid bugs by adding type safety checks in the generated parsing and serializing routines. Nonetheless, these technique would be helpful for detecting annotation errors that may
-be encountered during the development phase.
+%In contrast, we proactively avoid bugs by adding type safety checks in the generated parsing and serializing routines. Nonetheless, these technique would be helpful for detecting annotation errors that may be encountered during the development phase.
 
 Formal specification approaches for file systems~\cite{amani2012towards,chen2015using}
 require building a new file system from scratch, while our work focuses on building tools for existing file systems. Chen et al.~\cite{chen2015using} use logical address spaces as abstractions
