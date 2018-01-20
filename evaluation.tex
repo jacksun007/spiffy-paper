@@ -9,6 +9,7 @@ of our file-system conversion tool and the file-system aware block-layer caching
 
 \begin{table}
 \begin{centering}
+	\begin{small}
 \begin{tabular}{|c|c|c|c|}
 \hline 
 File System & Line Count & Annotated & Structures\tabularnewline
@@ -21,11 +22,12 @@ Btrfs & 556 & 151 & 27+4+1\tabularnewline
 F2FS & 462 & 127 & 14+16+5\tabularnewline
 \hline 
 \end{tabular}
+	\end{small}
 \par\end{centering}
 \vspace{-5pt}
 \caption{\label{tab:loc-struct}File system
 structure annotation effort.}
-\vspace{-5pt}
+\vspace{-8pt}
 \end{table}
 
 Table~\ref{tab:loc-struct} shows the effort required to correctly annotate the Ext4, Btrfs and F2FS file systems. The second column shows the number of lines of code of existing on-disk data structures in these file systems. The lines of code count was obtained using \texttt{cloc}~\cite{danial2009cloc} to eliminate comments and empty lines. The third column shows the number of annotation lines. This number is less than one-third of the total line count for all the file systems.
@@ -54,15 +56,15 @@ followed by four extent entries.
 
 \subsection{Developer Effort\label{subsec:Developer-Effort}}
 
-In this section, we evaluate the effort required to develop Spiffy applications. 
+%In this section, we evaluate the effort required to develop Spiffy applications. 
 
-\noindent\textbf{Dump Tool:} The file system dump tool is a simple tool in which the file-system independent XML writer module is written in 482 lines of C++ code, and the main function for each file system is written in 30 to 60 lines of code, depending on the number of structures the programmer wants to skip. The dump tool is helpful for debugging issues with real file systems, and to verify the correctness of the annotations. In particular, an expert can verify that the annotations are correct when the output of the dump tool matches the expected contents of the file system. Therefore, this tool has become an integral tool in our development process.
+\noindent\textbf{Dump Tool:} The file system dump tool includes a file-system independent XML writer module, written in 482 lines of C++ code. The main function for each file system is written in 30 to 60 lines of code, depending on the number of structures the programmer wants to skip. The dump tool is helpful for debugging issues with real file systems, and to verify the correctness of the annotations. In particular, an expert can verify that the annotations are correct when the output of the dump tool matches the expected contents of the file system. Therefore, this tool has become an integral part of our development process.
 
-\noindent\textbf{Free Space Tool:} The file system free space tool has 271 lines of file-system independent C++ code. In addition, 76 lines are Ext4 specific, 77 lines are Btrfs specific, and 194 lines are F2FS specific. F2FS requires more code due to the complex format of its block allocation information.
+\noindent\textbf{Free Space Tool:} The file system free space tool has 271 lines of file-system independent C++ code. File-system specific parts requrie 76 lines for Ext4, 77 lines for Btrfs, and 194 lines for F2FS. F2FS requires more code due to the complex format of its block allocation information.
 
-\noindent\textbf{Conversion Tool:} The Spiffy file system conversion tool framework is written in 504 lines of code. The code for reading Ext4 takes 218 lines, the code to convert to the F2FS file system requires 1760 lines, and the file-system developer code for F2FS, which is reused in other applications such as the dump tool, consists of 383 lines. We also wrote a manual converter tool that uses the \texttt{libext2fs}~\cite{tso-e2fsprogs} library to copy Ext4 metadata from the source file system, and manually writes raw data to create an F2FS file system. The manual converter has 223 lines of Ext4 code, and 2260 lines for the F2FS code. In this case, the two converters have similar number of lines of code, but the Spiffy converter has several other benefits. On the source side, the manual converter takes advantage of the \texttt{libext2fs} library. Changing this code for a different file system would require significant changes, and would require much more code for a file system such as ZFS that does not have a similar user-level library. On the destination side, the main reason that the Spiffy converter requires many file-system specific lines of code is that each newly created object needs to be manually initialized. However, Spiffy uses the \texttt{create\_container} and \texttt{save} functions to create and serialize objects in a type-safe manner, and checks constraints on objects, while the manual converter writes raw data, which is error-prone, leading to the types of bugs discussed in Section~\ref{sec:Extended-Motivation}.
+\noindent\textbf{Conversion Tool:} The Spiffy file system conversion tool framework is written in 504 lines of code. The code for reading Ext4 takes 218 lines, the code to convert to the F2FS file system requires 1760 lines, and the file-system developer code for F2FS, which is reused in other applications such as the dump tool, consists of 383 lines. We also wrote a manual converter tool that uses the \texttt{libext2fs}~\cite{tso-e2fsprogs} library to copy Ext4 metadata from the source file system, and manually writes raw data to create an F2FS file system. The manual converter has 223 lines of Ext4 code, and 2260 lines for the F2FS code. In this case, the two converters have similar number of lines of code, but the Spiffy converter has several other benefits. On the source side, the manual converter takes advantage of the \texttt{libext2fs} library. Changing this code for a different file system would require significant effort, and would require much more code for a file system such as ZFS that does not have a similar user-level library. On the destination side, the Spiffy converter requires many file-system specific lines of code to be manually initialize each newly created object. However, Spiffy uses the \texttt{create\_container} and \texttt{save} functions to create and serialize objects in a type-safe manner, and checks constraints on objects, while the manual converter writes raw data, which is error-prone, leading to the types of bugs discussed in Section~\ref{sec:Extended-Motivation}.
 
-\noindent\textbf{Prioritized Cache:} The original Bcache code consisted of 10518 lines of code. To implement prioritized caching we added 289 lines to this code, which invokes our generic runtime metadata interpretation framework, consisting of 2158 lines of code. This framework provides hooks to specify file-system specific policies. Our Ext4-specific policy requires 111 lines of code, and the Btrfs-specific policy requires 134 lines of code. Currently, we have not implemented prioritized caching for F2FS, which would require tracking NAT entries, similar to how we track inode numbers for Btrfs to find their file extents.
+\noindent\textbf{Prioritized Cache:} The original Bcache code consisted of 10518 lines of code. To implement prioritized caching we added 289 lines to this code, which invokes our generic runtime metadata interpretation framework, consisting of 2158 lines of code. This framework provides hooks to specify file-system specific policies. Our Ext4-specific policy requires 111 lines of code, and the Btrfs-specific policy requires 134 lines of code. Currently, we have not implemented prioritized caching for F2FS, which would require tracking NAT entries, similar to how we track inode numbers for Btrfs to find file extents.
 
 \begin{table*}
 \small
@@ -89,16 +91,16 @@ dump.f2fs & super block & \texttt{log\_blocks\_per\_seg} & index out of bound er
 
 \subsection{Corruption Experiments\label{subsec:corruption_experiment}}
 
-We use our type-specific corruption tool to evaluate the robustness of Spiffy generated libraries. We ran a series of type-specific corruption experiments on existing file system dump tools and the Spiffy dump tool. The type-specific corruption experiment takes a 128MB file system image filled with 12000 tiny files (less than 4 bytes) and some directories, then corrupts a specific field of a selected instance of a specified type (e.g., one of the inode structures). The field is either corrupted to a random value or to zero.
+We use our type-specific corruption tool to evaluate the robustness of Spiffy generated libraries. We ran a series of type-specific corruption experiments on existing file system dump tools and the Spiffy dump tool. The corruption experiment takes a 128MB file system image filled with 12000 tiny files (less than 4 bytes) and some directories, then corrupts a specific field of a selected instance of a specified type (e.g., one of the inode structures). The field is either corrupted to a random value or to zero.
 
-The Spiffy dump tool was able to generate correctly formatted XML files in the face of arbitrary single-field corruptions. When corruption is detected during the parsing of a container or a pointer fetch (i.e., pointer address is out-of-bound or fails a placement constraint), an error is printed and the program stops the traversal process.
+The Spiffy dump tool was able to generate correctly formatted XML files in the face of arbitrary single-field corruptions. When corruption is detected during the parsing of a container or a pointer fetch (i.e., pointer address is out-of-bound or fails a placement constraint), an error is printed and the program stops the traversal.% process.
 
-We also run the same corrupted images on existing tools. Table~\ref{tab:corruption-result} 
+We also run existing tools on the same corrupted images. Table~\ref{tab:corruption-result} 
 describes the crashes we found during the experiments. For dumpe2fs (dump tool for Ext4) v1.42.13, we found a single crash when the \texttt{s\_creator\_os} field of the super block is corrupted. For dump.f2fs v1.6.1-1, we observed 5 instances of segmentation faults and multiple cases of assertion errors. Three of the crashes were due to corruption in the super block, and one crash each was detected for the summary block and inode structures. We were unable to trigger any crash-related bugs in btrfs-debug-tree v4.4.
 
-These results are expected since F2FS is a relatively young file system. Btrfs applies metadata checksumming technique to avoid metadata corruption, and thus requires correlated corruption where a metadata field is corrupted and somehow the metadata block passes checksum verification.  Lastly, Ext4, being the most battle-tested file system for Linux, has hardened itself against various forms of corruption. It is encouraging that a Spiffy application is more robust than dumpe2fs without requiring maturity or significant testing effort.
+These results are not unexpected since F2FS is a relatively young file system. Btrfs uses metadata checksumming to detect metadata corruption, and thus requires the corruption to be injected before checksum generation to fully test the robustness of its dump tool.  Lastly, Ext4's dumpe2fs tool does not traverse the full file system metadata, and so does not encounter most of the metadata corruption. Our Spiffy dump tool is both more complete and more robust than dumpe2fs, without requiring significant testing effort.
 
-Incidentally, we also tried an extensive set of random corruption experiments, and none of the existing tools had crashes, showing that our type-specific corruptor is a useful tool for testing the robustness of these applications.
+We also tried an extensive set of random corruption experiments, and none of the existing tools had crashes, showing that our type-specific corruptor is a useful tool for testing the robustness of these applications.
 
 \subsection{File System Conversion Performance\label{subsec:fsconvert_performance}}
 
@@ -155,7 +157,8 @@ from Ext4 to F2FS for different number of files.}
 We compare the time it takes to perform copy-based conversion, versus using the Spiffy-based and the manually written in-place file-system conversion tools. The results are shown in Table \ref{tab:fsconvert-result}. The experiments are run on an Intel 510 Series SATA SSD.  We create the file set using Filebench 1.5-a3~\cite{wilson2008new} in an Ext4 partition on the SSD, and then convert the partition to F2FS. The 20K file set uses the \texttt{msnfs} file size distribution with the largest file size up to 1GB. The rest of the file sets have progressively fewer small files. All file sets have a total size of 16GB. For the copy converter, we run \texttt{tar -aR} at the root of the SSD partition and save the tar file on a separate local disk. We then reformat the SSD partition and extract the file set back into the partition.
 
 
-The copy converter requires transferring two full copies of the file set, and so it takes 30 to 50 times longer than using the conversion tools, which only need to move data blocks out of F2FS's static metadata area and then create the corresponding F2FS metadata. Both conversion tools take longer time with larger filesets since they need to handle the conversion of more file system metadata. The library-assisted conversion tool performs reasonably compared to its manually-written counterpart, with at most a 16.7\% overhead for the added type-safety protection that the library offers. This shows the feasibility of using the library for general use when working with file system metadata. 
+The copy converter requires transferring two full copies of the file set, and so it takes 30x to 50x longer than using the conversion tools, which only need to move data blocks out of F2FS's static metadata area and then create the corresponding F2FS metadata. Both conversion tools take more time with larger filesets since they need to handle the conversion of more file system metadata. The library-assisted conversion tool performs reasonably compared to its manually-written counterpart, with at most a 16.7\% overhead for the added type-safety protection that the library offers. 
+%This shows the feasibility of using the library for general use when working with file system metadata. 
 
 %
 % Jack: should we talk about why mount-and-copy does slightly better with more small files?
@@ -176,8 +179,9 @@ We generate a total file set size of 8GB with an average file size of 128KB, for
 \begin{centering}
 \includegraphics[width=1\columnwidth]{figures/caching-result-stacked}
 \par\end{centering}
-\vspace{-5pt}
+\vspace{-7pt}
 \caption{\label{fig:Performance-of-differentiated}Throughput of prioritized caching over LRU caching with one or two file servers for Ext4 and Btrfs.}
+\vspace{-9pt}
 \end{figure}
 
-Figure \ref{fig:Performance-of-differentiated} shows the average throughput for each of the experiments in operations per second.  The error bars show 95\% confidence intervals.  First, we establish the baseline performance of a single fileserver instance running alone, which has a cache hit ratio of 64\% and 54\% for Ext4 and Btrfs, respectively. Next, we run two instances of fileserver to observe the effect of cache contention. We see a drastic reduction in cache hit ratio to 23\% and 24\% for Ext4 and Btrfs, respectively.  Both fileservers have similar performance, which is between 2.3x and 2.7x less than when running alone. When we apply preferential caching to the files used by fileserver A, however, its throughput improves by 60\% over non-prioritized LRU caching when running concurrently with fileserver B, with the overall cache hit ratio improving to 46\% and 53\% for Ext4 and Btrfs, respectively.  Interestingly, prioritized caching also improves the aggregate throughput of the system by 14\% to 22\%. Giving priority to one of the two jobs implicitly reduces cache contention. These results show that storage applications using our generated library can provide reasonable performance improvements without the need to change the file system code.
+Figure \ref{fig:Performance-of-differentiated} shows the average throughput for each of the experiments in operations per second.  The error bars show 95\% confidence intervals.  First, we establish the baseline performance of a single fileserver instance running alone, which has a cache hit ratio of 64\% and 54\% for Ext4 and Btrfs, respectively. Next, we run two instances of fileserver to observe the effect of cache contention. We see a drastic reduction in cache hit ratio to 23\% and 24\% for Ext4 and Btrfs, respectively.  Both fileservers have similar performance, which is between 2.3x and 2.7x less than when running alone. When we apply preferential caching to the files used by fileserver A, however, its throughput improves by 60\% over non-prioritized LRU caching when running concurrently with fileserver B, with the overall cache hit ratio improving to 46\% and 53\% for Ext4 and Btrfs, respectively.  Prioritized caching also improves the aggregate throughput of the system by 14\% to 22\%. Giving priority to one of the two jobs implicitly reduces cache contention. These results show that storage applications using our generated library can provide reasonable performance improvements without changing the file system code.
