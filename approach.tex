@@ -1,6 +1,6 @@
 \section{Approach\label{sec:Approach}}
 
-The purpose of our file system annotation language is to enable type-safe interpretation of file system structures, in both offline and online contexts.
+Our annotation language enables type-safe interpretation of file system structures, in both offline and online contexts.
 Type safety ensures that parsing and serialization of file system structures will detect data corruption that leads to type violations, thus reducing the chance of corruption propagation, and avoiding crash failures.
 
 Ideally, data structure types and their relationships could be extracted from file system source code. Although the C header files of a file system contain the structural definitions for various metadata types, they are incomplete descriptions of the file system format because information is often hidden within the file system code. Our annotations augment the C language, helping specify parts of a file system's format that cannot be easily expressed in C.
@@ -21,7 +21,7 @@ After a file system developer annotates their file system's data structures, we 
 %For example, the application may wish to operate on the directory entries of a file system (e.g. to build a snapshot of the file system's namespace). A developer using Spiffy would write a function for each file system's "directory entry" structure, which invokes a file-system agnostic function to record the file name, or any other pertinent information. In order to optimize file system traversal, the developer could also write decision making code for other objects to determine whether to prune the traversal of some pointers within the file system. (e.g., for Btrfs, directory entries only exist within B-trees of some particular IDs) In contrast, a manually written application requires file-system specific code to traverse the file system, loading and validating data structures, and parsing directory entries before being able to invoke any application-specific code.
 % actually invoking any application-specific code, namely, recording the file name in the directory entry.
 
-Our annotation-based approach offers several advantages. First, it provides a concise and clear documentation of the file system's format.  Second, our generated libraries enable rapid-prototyping of file-system aware storage applications. The libraries provide a uniform API, easing the development of applications that work across file systems so that the programmer can focus on the logic and not the format of the file systems. Third, our approach requires minimal changes to the file system source code (the annotations are only in the C header files, and are backwards compatible with existing binary code), reducing the chance of introducing file system bugs. For example, differentiated storage services~\cite{Mesnier2011} was implemented by modifying the file system and the kernel's storage stack to enable I/O classification.  With our approach, this application can be implemented by using introspection at the block layer for an unmodified file system, or at the hypervisor for an existing virtual machine. Finally, file system formats are known to be stable over time, so there is minimal cost for maintaining annotations.
+Our annotation-based approach has several advantages. First, it provides a concise and clear documentation of the file system's format.  Second, our generated libraries enable rapid prototyping of file-system aware storage applications. The libraries provide a uniform API, easing the development of applications that work across file systems so that the programmer can focus on the logic and not the format of the file systems. Third, our approach requires minimal changes to the file system source code (the annotations are only in the C header files and are backwards compatible with existing binary code), reducing the chance of introducing file system bugs. In contrast, differentiated storage services~\cite{Mesnier2011} needed to modify the file system and the kernel's storage stack to enable I/O classification.  With our approach, this application can be implemented by using introspection at the block layer for an unmodified file system, or at the hypervisor for an existing virtual machine. Finally, file system formats are known to be stable over time, so there is minimal cost for maintaining annotations.
 
 \subsection{Designing Annotations\label{subsec:Annotation-Design}}
 
@@ -36,16 +36,10 @@ struct ext4_dir_entry {
 \end{lstlisting}
 \vspace{-10pt}
 \caption{\label{fig:ext4_dirent}Ext4 directory entry structure definition.}
+\vspace{-8pt}
 \end{figure}
 
-\begin{figure}[t]
-  \centering{}\includegraphics[width=1\columnwidth]{figures/f2fs_checkpoints}
-\vspace{-20pt}
-\caption{\label{fig:F2FS-checkpoint-packs}Each F2FS checkpoint pack contains a header followed by a variable number of orphan blocks.}
-\vspace{-5pt}
-\end{figure}
-
-In this section, we describe the concepts that motivated the design of our annotation language for specifying the format of file system structures.
+The design of our annotation language for specifying the format of file system structures was motivated by several key concepts.
 
 \paragraph{File System Pointers}
 
@@ -62,14 +56,62 @@ Our design incorporates this requirement by associating an \emph{address space} 
 %% perhaps use f2fs example?
 %Multiple pointers may refer to the same structure. For example, the block group descriptor tables in Ext4 refer to inode tables, which have inode structures in them. Similarly, directory entries have an inode number that also refer to these inode structures, as shown in Figure~\ref{fig:ext4_dirent}. We prefer to annotate the descriptor tables with a block type pointer because the inode table can then be viewed as a contiguous structure. Annotating the inode number is possible, but will require the annotation developer to implement an inode address space for mapping inode numbers to inode structures.
 
+\begin{figure}[t]
+	\centering{}\includegraphics[width=1\columnwidth]{figures/f2fs_checkpoints}
+	\vspace{-20pt}
+	\caption{\label{fig:F2FS-checkpoint-packs}Each F2FS checkpoint pack contains a header followed by a variable number of orphan blocks.}
+	\vspace{-8pt}
+\end{figure}
+
+\begin{table*}
+	\begin{centering}
+		\begin{small}
+			\begin{tabular}[t]{|c|l|l|}
+				\hline 
+				Base Class & Member Function & Description \tabularnewline
+				\hline
+				\multicolumn{3}{l}{Spiffy File System Library}\tabularnewline
+				\hline 
+				Entity & \texttt{int process\_fields(Visitor \& v)} & allows \textit{v} to visit all fields of this object \tabularnewline
+				& \texttt{int process\_pointers(Visitor \& v)} & allows \textit{v} to visit all pointer fields of this object \tabularnewline
+				& \texttt{int process\_by\_type(int t, Visitor \& v)} & allows \textit{v} to visit all structures of type \textit{t} \tabularnewline 
+				\hline 
+				Pointer & \texttt{Entity * fetch()} & retrieves the pointed-to container from disk \tabularnewline
+				\hline
+				Container & \texttt{int save(bool alloc=true)} & \makecell[l]{serializes and then persists the container,
+					may \\ assign a new address to the container
+				}\tabularnewline
+				\hline
+				FileSystem & \texttt{FileSystem(IO \& io)} & instantiates a new file system object\tabularnewline
+				& \texttt{Entity * fetch\_super()} & retrieves the super block from disk\tabularnewline
+				& \texttt{Entity * create\_container(int type, Path \& p)} & creates a new container of metadata \textit{type}\tabularnewline
+				& \makecell[l]{\texttt{Entity * parse\_by\_type(int type, Path \& p,} \\  \texttt{Address \& addr, const char * buf, size\_t len)}} & \makecell[l]{parses the buffer as metadata \textit{type}, using \\ \textit{p} to resolve cross structure dependencies \\ }\tabularnewline
+				\hline
+				\multicolumn{3}{l}{File System Developer}\tabularnewline
+				\hline 
+				IO & \texttt{int read(Address \& addr, char * \& buf)} & reads from an address space specified by \textit{addr}\tabularnewline
+				& \texttt{int write(Address \& addr, const char * buf)} & writes to an address space specified by \textit{addr}\tabularnewline
+				& \texttt{int alloc(Address \& addr, int type)} & allocates an on-disk address for metadata \textit{type}\tabularnewline 
+				\hline
+				\multicolumn{3}{l}{Application Programmer}\tabularnewline
+				\hline 
+				Visitor & \texttt{int visit(Entity * e)} & visits an entity and possibly processes it\tabularnewline
+				\hline
+			\end{tabular}
+		\end{small}
+		\par\end{centering}
+	\vspace{-5pt}
+	\caption{\label{tab:library-api}Spiffy C++ Library API. }
+	\vspace{-8pt}
+\end{table*}
 
 \paragraph{Cross-Structure Dependencies}
 
-File system structures often depend on other structures. For example, the length of a directory entry's \texttt{name} in Ext4 is stored in a field called \texttt{name\_len}, as shown in Figure~\ref{fig:ext4_dirent}.  However, this data structure definition does not provide the linkage between the two fields.\footnote{This is especially confusing because \texttt{name} has a fixed size in the definition.} Structures may depend on fields in other structures as well. For example, several fields of the super block are frequently accessed to determine the block size, the features that are enabled in the file system, etc. To support these dependencies, we need to name these structures. For example, the expression \texttt{sb.s\_inode\_size} helps determine the size of an inode object, where \texttt{sb} is the name assigned to the super block.
+File system structures often depend on other structures. For example, the length of a directory entry's \texttt{name} in Ext4 is stored in a field called \texttt{name\_len}, as shown in Figure~\ref{fig:ext4_dirent}.  However, this data structure definition does not provide the linkage between the two fields.\footnote{Confusingly, \texttt{name} has a fixed size in the definition.} Structures may depend on fields in other structures as well. For example, several fields of the super block are frequently accessed to determine the block size, the features that are enabled in the file system, etc. To support these dependencies, we need to name these structures. For example, the expression \texttt{sb.s\_inode\_size} helps determine the size of an inode object, where \texttt{sb} is the name assigned to the super block.
 
 The naming mechanism must ensure that a name refers to the correct structure. For example, the F2FS file system contains two checkpoint packs for ensuring file system consistency, as shown in Figure~\ref{fig:F2FS-checkpoint-packs}.  The number of orphan blocks in a F2FS checkpoint pack is determined by a field inside the checkpoint header. Our naming mechanism must ensure that when this field is accessed, it refers to the header structure in the correct checkpoint pack.
 
-Spiffy uses a path-based name resolution mechanism, based on the observation that every file system structure is accessed along a path of pointers starting from the super block. In the simplest case, the automatic \texttt{self} variable is used to reference the fields of the same structure. Otherwise, a name lookup is performed in the reverse order of the path that was used to access the data structure. For example, in Figure~\ref{fig:F2FS-checkpoint-packs}, when we need to reference the checkpoint header (\texttt{cphdr} in the figure) while parsing the orphan block, the name resolution mechanism can unambiguously determine that it is referring to its parent checkpoint header. It also makes it easy to use reference counting to ensure that a referenced structure is valid in memory when it needs to be accessed.
+Spiffy uses a path-based name resolution mechanism, based on the observation that every file system structure is accessed along a path of pointers starting from the super block. In the simplest case, the automatic \texttt{self} variable is used to reference the fields of the same structure. Otherwise, a name lookup is performed in the reverse order of the path that was used to access the data structure. For example, in Figure~\ref{fig:F2FS-checkpoint-packs}, when we need to reference the checkpoint header (\texttt{cphdr} in the figure) while parsing the orphan block, the name resolution mechanism can unambiguously determine that it is referring to its parent checkpoint header. This strategy also makes it easy to use reference counting to ensure that a referenced structure is valid in memory when it needs to be accessed.
 %Our path-based naming approach works for both normal and alias pointers.
 
 % (jsun): necessary to mention this?
@@ -80,61 +122,20 @@ File system metadata are frequently context-sensitive. A pointer may reference d
 
 \paragraph{Computed Fields}
 
-Sometimes file systems compute a value from one or more fields and use it to locate structures. For example, the block group descriptor table in Ext4 is implicitly the block that immediately follows the super block. However, the exact address of the descriptor blocks depends on the block size, which is specified in the super block. We annotate this information as an implicit field of the super block that is computed at runtime. This approach allows the field to be dereferenced like a normal pointer, allowing traversal of the file system, but without requiring any changes to the underlying file-system format.
+Sometimes file systems compute a value from one or more fields and use it to locate structures. For example, the block group descriptor table in Ext4 is implicitly the block that immediately follows the super block. However, the exact address of the descriptor blocks depends on the block size, which is specified in the super block. We annotate this information as an implicit field of the super block that is computed at runtime. This approach allows the field to be dereferenced like a normal pointer, allowing traversal of the file system without requiring any changes to the underlying format.
 
 \paragraph{Metadata Granularity}
 
-Existing file systems assume that the underlying storage media is a block device and access data in block units. Data structures can exist within such blocks or they can span contiguous physical blocks.  Some data structures that span blocks are read in their entirety.  For example, the Btrfs B-tree nodes are (by default) 16KB, or 4 blocks, and these blocks are read from disk together. In other cases, the data structure is read in portions. For example, an Ext4 inode table contains a group of inode blocks. The file system does not load the entire table in memory because it can be very large. Instead, it only loads the portions that are needed. For example, only one inode block needs to be fetched from disk to access an inode structure.
+Existing file systems assume that the underlying storage media is a block device and access data in block units. Data structures can exist within such blocks or they can span contiguous physical blocks.  Some data structures that span blocks are read in their entirety.  For example, the Btrfs B-tree nodes are (by default) 16KB, or 4 blocks, and these blocks are read from disk together. In other cases, the data structure is read in portions. For example, an Ext4 inode table contains a group of inode blocks. The file system does not load the entire table in memory because it can be very large. Instead, it only loads the portions that are needed. 
+%For example, only one inode block needs to be fetched from disk to access an inode structure.
 
 We define an \emph{access unit} for file system structures so that the compiler can generate efficient code for traversing the file system.  We call the unit of disk access a \emph{container}. The container size is typically the file system block size but it may span multiple blocks, as in the Btrfs example. A structure that is placed inside a container is called an \emph{object}. Finally, structures that span containers are called \emph{extents}. We load extents on demand, when their containers are accessed.
 
 \paragraph{Constraint Checking}
 
-The values of the metadata fields within or across different objects often have constraints. For example, an Ext4 extent header always begins with the magic number \texttt{0xF30A} to help detect corrupt blocks. Similarly, the \texttt{name\_len} field of an Ext4 directory entry should be less than the \texttt{rec\_len} field. Such constraints can be specified for each structure so that they can be checked to ensure correctness when parsing the structure.
+The values of metadata fields within or across different objects often have constraints. For example, an Ext4 extent header always begins with the magic number \texttt{0xF30A} to help detect corrupt blocks. Similarly, the \texttt{name\_len} field of an Ext4 directory entry should be less than the \texttt{rec\_len} field. Such constraints can be specified for each structure so that they can be checked to ensure correctness when parsing the structure.
 
 The set of valid addresses for a metadata container may also have a \textit{placement constraint}. For example, F2FS NAT blocks can only be placed inside the NAT area, which is specified in the F2FS super block. By annotating the placement constraint of a metadata container, Spiffy can verify that the address assigned to newly allocated metadata is within the correct bounds before the metadata is persisted to disk.
-
-\begin{table*}
-\begin{centering}
-\begin{small}
-\begin{tabular}[t]{|c|l|l|}
-\hline 
-Base Class & Member Function & Description \tabularnewline
-\hline
-\multicolumn{3}{l}{Spiffy File System Library}\tabularnewline
-\hline 
-Entity & \texttt{int process\_fields(Visitor \& v)} & allows \textit{v} to visit all fields of this object \tabularnewline
- & \texttt{int process\_pointers(Visitor \& v)} & allows \textit{v} to visit all pointer fields of this object \tabularnewline
- & \texttt{int process\_by\_type(int t, Visitor \& v)} & allows \textit{v} to visit all structures of type \textit{t} \tabularnewline 
-\hline 
-Pointer & \texttt{Entity * fetch()} & retrieves the pointed-to container from disk \tabularnewline
-\hline
-Container & \texttt{int save(bool alloc=true)} & \makecell[l]{serializes and then persists the container,
-  may \\ assign a new address to the container
- }\tabularnewline
-\hline
-FileSystem & \texttt{FileSystem(IO \& io)} & instantiates a new file system object\tabularnewline
- & \texttt{Entity * fetch\_super()} & retrieves the super block from disk\tabularnewline
- & \texttt{Entity * create\_container(int type, Path \& p)} & creates a new container of metadata \textit{type}\tabularnewline
- & \makecell[l]{\texttt{Entity * parse\_by\_type(int type, Path \& p,} \\  \texttt{Address \& addr, const char * buf, size\_t len)}} & \makecell[l]{parses the buffer as metadata \textit{type}, using \\ \textit{p} to resolve cross structure dependencies \\ }\tabularnewline
-\hline
-\multicolumn{3}{l}{File System Developer}\tabularnewline
-\hline 
-IO & \texttt{int read(Address \& addr, char * \& buf)} & reads from an address space specified by \textit{addr}\tabularnewline
- & \texttt{int write(Address \& addr, const char * buf)} & writes to an address space specified by \textit{addr}\tabularnewline
- & \texttt{int alloc(Address \& addr, int type)} & allocates an on-disk address for metadata \textit{type}\tabularnewline 
-\hline
-\multicolumn{3}{l}{Application Programmer}\tabularnewline
-\hline 
-Visitor & \texttt{int visit(Entity * e)} & visits an entity and possibly process it\tabularnewline
-\hline
-\end{tabular}
-\end{small}
-\par\end{centering}
-\vspace{-5pt}
-\caption{\label{tab:library-api}Spiffy C++ Library API. }
-\vspace{-5pt}
-\end{table*}
 
 \subsection{The Spiffy API\label{subsec:spiffy-api}}
 
@@ -144,7 +145,7 @@ The Spiffy library uses the visitor pattern~\cite{gamma1995design}, allowing a p
 
 %The \texttt{Entity} base class provides a common interface for all metadata, including objects (structures, vectors, fields), pointers, containers and extents. The \texttt{process\_pointers} function invokes the \texttt{visit} function of an application-defined Visitor on each pointer within the entity.
 
-The \texttt{Entity} base class provides a common interface for all metadata structures and their fields. The \texttt{process\_pointers} function invokes the \texttt{visit} function of an application-defined Visitor class on each pointer within the entity. The \texttt{process\_by\_type} function allows visiting a specific type of structure that is reachable from the entity. Unlike the other two process functions, \texttt{process\_by\_type} will automatically follow pointers. Thus, for example, invoking \texttt{process\_by\_type} on the super block with the inode structure as an argument will result in visiting all inodes in the file system.
+The \texttt{Entity} base class provides a common interface for all metadata structures and their fields. The \texttt{process\_pointers} function invokes the \texttt{visit} function of an application-defined Visitor class on each pointer within the entity. The \texttt{process\_by\_type} function allows visiting a specific type of structure that is reachable from the entity. Unlike the other process functions, \texttt{process\_by\_type} will automatically follow pointers. For example, invoking \texttt{process\_by\_type} on the super block with the inode structure as an argument results in visiting all inodes in the file system.
 
 Every container (and extent) has an address associated with it that allows accessing the container from disk. Figure~\ref{fig:address-struct} shows the format of an address, consisting of an address space, an identifier and an offset within the address space, and the size of the container. The offset field is used when a container belongs to an extent.
 
@@ -159,7 +160,7 @@ struct Address {
 \end{lstlisting}
 \vspace{-10pt}
 \caption{\label{fig:address-struct}Address structure to locate container on disk.}
-\vspace{-5pt}
+\vspace{-8pt}
 \end{figure}
 
 The \texttt{Pointer} class stores the address of a container (or an extent), and its \texttt{fetch} function reads the pointed-to container from disk. Figure~\ref{fig:fooptr-fetch} shows the generated code for the \texttt{fetch} function for a pointer to a container named \texttt{IBlock} (inode block). The file-system developer implements an \texttt{IO} class with a \texttt{read} function for each address space defined for the file system. When the \texttt{IBlock} is constructed, it invokes the constructors of its fields, thus creating all the objects (e.g., inodes) within the container. The constructors for inodes, in turn, invoke the constructors of block pointers in the inodes, which initialize a part of the address (address space, size and offset) of the block pointers based on the annotations. Then the container is parsed, which initializes the container fields in a nested manner, including setting the \texttt{id} component of the address of all the block pointers in the inodes contained in the \texttt{IBlock}.
@@ -180,7 +181,7 @@ Entity * IBlockPtr::fetch() {
 \end{lstlisting}
 \vspace{-10pt}
 \caption{\label{fig:fooptr-fetch}Example of a generated \texttt{fetch} function. \texttt{IBlockPtr} is a subclass of \texttt{Pointer}.}
-\vspace{-5pt}
+\vspace{-8pt}
 \end{figure}
 
 %% During initialization, pointer fields set up the address space, size, and offset of its Address object ( see Figure~\ref{fig:address-struct}), which are known information provided by the annotations. During parsing, the pointer field gets the \texttt{id} associated with the address, which enables the actual fetch. This function works by creating a temporary buffer and use the \texttt{IO} object associated the file system to perform the actual disk access.
@@ -202,7 +203,7 @@ int Container::save(bool alloc) {
 \end{lstlisting}
 \vspace{-10pt}
 \caption{\label{fig:object-save}Abbreviated version of the \texttt{save} function.}
-\vspace{-5pt}
+\vspace{-8pt}
 \end{figure}
 \fi
 
@@ -216,7 +217,7 @@ The \texttt{create\_container} function constructs empty containers of a given t
 
 \subsection{Building Applications\label{subsec:Building-Applications}}
 
-Figure~\ref{fig:fs-traversal-example} shows a sample application built using the Spiffy API. This application prints the type of each metadata block in an Ext4 file system in depth-first order. The \texttt{Ext4IO} class implements the block and the file address space, as described later in Section~\ref{sec:Implementation}. The program starts by invoking \texttt{fetch\_super}, which fetches the super block from a known location on disk and parses it. Then it uses two mutually recursive visitors, \texttt{EntVisitor} and \texttt{PtrVisitor}, to traverse the file system.
+Figure~\ref{fig:fs-traversal-example} shows a sample application built using the Spiffy API. This application prints the type of each metadata block in an Ext4 file system in depth-first order. The \texttt{Ext4IO} class implements the block and the file address space, as described in Section~\ref{sec:Implementation}. The program starts by invoking \texttt{fetch\_super}, which fetches the super block from a known location on disk and parses it. Then it uses two mutually recursive visitors, \texttt{EntVisitor} and \texttt{PtrVisitor}, to traverse the file system.
 
 The \texttt{EntVisitor::visit} function takes an entity as input, prints its name, and then invokes \texttt{process\_pointers}, which calls the \texttt{PtrVisitor::visit} function for every pointer in the entity. The \texttt{PtrVisitor::visit} function invokes \texttt{fetch}, which fetches the pointed-to entity from disk, and invokes \texttt{EntVisitor::visit} on it.
 
@@ -253,7 +254,7 @@ void main(void) {
 
 \subsection{Limitations\label{subsec:spiffy_limitation}}
 
-The correctness of Spiffy applications depends on correctly written annotations. Therefore, if and when file system format changes do occur, the specifications will need to be updated. In addition, Spiffy applications will also need to update all file-system specific code that is affected by the format changes. These changes will likely only affect code that directly operates on the updated metadata structures, since the Spiffy library will take care of safe traversal and parsing of any intermediate structures.
+The correctness of Spiffy applications depends on correctly written annotations. Therefore, if and when file system format changes do occur, the specifications will need to be updated. Spiffy applications will also need to update all file-system specific code that is affected by the format changes. These changes will likely only affect code that directly operates on the updated metadata structures, since the Spiffy library will provide safe traversal and parsing of any intermediate structures.
 
 Unlike typical file-system applications that operate at the VFS layer and are file-system independent, Spiffy applications operate directly on file-system specific structures and are thus file-system dependent. Since file systems share common abstractions (e.g. files, directories, inodes), it may be possible to carefully abstract the functionality that is shared between implementations, reducing file-system dependence even further.
 

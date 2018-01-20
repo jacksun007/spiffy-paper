@@ -4,7 +4,7 @@ We have written five file-system aware storage applications using the Spiffy fra
 
 \paragraph*{File System Dump Tool}
 
-The file system dump tool parses all the metadata in a file system image and exports the result in an XML format, using file system traversal code similar to the example shown in Figure~\ref{fig:fs-traversal-example}. In addition to \texttt{process\_pointers}, the entity class provides an \texttt{process\_fields} method that allows iterating over all fields (not just pointer fields) of the class. The dump tool can be configured to ignore structures such as unallocated inode structures from being exported.
+The file system dump tool parses all the metadata in a file system image and exports the result in an XML format, using file system traversal code similar to the example in Figure~\ref{fig:fs-traversal-example}. In addition to \texttt{process\_pointers}, the entity class provides a \texttt{process\_fields} method that allows iterating over all fields (not just pointer fields) of the class. The dump tool can be configured to prevent structures such as unallocated inode structures from being exported.
 
 %Since some file system metadata may not be of interest, the XML writer provides APIs for ignoring fields or structures. For example, the Ext4 dump tool excludes any unallocated inode structures from being exported to XML. The tool currently supports Ext3/4, Btrfs, and F2FS.
 
@@ -12,13 +12,14 @@ The file system dump tool parses all the metadata in a file system image and exp
 
 \paragraph*{Type-Specific Corruption Tool}
 
-The type-specific corruption tool is a variant of the dump tool that can inject file-system corruption in a type-specific manner~\cite{bairavasundaram2008analyzing}, allowing us to test the robustness of file systems and their tools. When we decide to corrupt a field, we cannot simply modify its in-memory value, since serialization is type-safe. For example, the serializer will refuse to serialize a corrupted value that violates its type constraints. Instead, the corruption is performed after a block is serialized but before it is written.
+This tool is a variant of the dump tool that injects file-system corruption in a type-specific manner~\cite{bairavasundaram2008analyzing}, allowing us to test the robustness of file systems and their tools. When we decide to corrupt a field, we cannot simply modify its in-memory value, since serialization is type-safe. For example, the serializer will refuse to serialize a corrupted value that violates its type constraints. Instead, corruption is performed after a block is serialized but before it is written.
 
 % For example, if we increase the length of a directory entry, the serialized directory block will shift the rest of the entries. 
 
 \paragraph*{Free Space Tool}
 
-The free space tool shows file-system fragmentation by plotting a histogram of the size of free extents in the file system. The tool retrieves the metadata structures that store free space information and processes them, e.g., block bitmaps for Ext4, extent items for Btrfs, and segment information table (SIT) for F2FS. This logic is implemented by using \texttt{process\_by\_type}, described in Table~\ref{tab:library-api}, and a custom visit function that conveniently processes all the retrieved metadata structures, without the need to write code to manually traverse the file system and parse intermediate structures. The rest of the code in the application is common across file systems.
+This tool shows file-system fragmentation by plotting a histogram of the size of free extents. The tool retrieves the metadata structures that store free space information and processes them (e.g., block bitmaps for Ext4, extent items for Btrfs, and segment information table (SIT) for F2FS). This logic is implemented using \texttt{process\_by\_type} (see Table~\ref{tab:library-api}) and a custom visit function that processes all the retrieved metadata structures. Code to traverse the file system and parse intermediate structures is provided by the Spiffy library. 
+%The rest of the application code is common across file systems.
 
 %% The free space tool displays the offsets and sizes of all free space extents in a file system image. A histogram of the free extent counts is also displayed, with power of two bin sizes.
 
