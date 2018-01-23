@@ -1,6 +1,6 @@
 \section{Related Work\label{sec:Related_Work}}
 
-A large body of work has focused on storage-layer applications that perform file-system specific processing for improving performance or reliability. Semantically-smart disks~\cite{Sivathanu03} used probing to gather detailed knowledge of file system behavior, allowing functionality or performance to be enhanced transparently at the block layer. The probing was designed for Ext4-like file systems and would likely require changes for copy-on-write and log-structured file systems. Spiffy annotations avoid the need for probing, helping provide accurate block type information based on runtime interpretation that is mostly file-system agnostic.
+A large body of work has focused on storage-layer applications that perform file-system specific processing for improving performance or reliability. Semantically-smart disks~\cite{Sivathanu03} used probing to gather detailed knowledge of file system behavior, allowing functionality or performance to be enhanced transparently at the block layer. The probing was designed for Ext4-like file systems and would likely require changes for copy-on-write and log-structured file systems. Spiffy annotations avoid the need for probing, helping provide accurate block type information based on runtime interpretation.
 
 I/O shepherding~\cite{Gunawi07} improves reliability by using file structure information to implement checksumming and replication. Block type information is provided to the storage layer I/O shepherd by modifying the file system and the buffer-cache code. Our approach enables I/O shepherding without requiring these changes. {\color{red}Also, unlike I/O shepherding, Spiffy allows interpreting block contents, enabling more powerful policies, such as caching the files of specific users.}
 
@@ -25,10 +25,8 @@ Several projects have explored C extensions for expressing additional semantic i
 
 Formal specification approaches for file systems~\cite{amani2012towards,chen2015using}
 require building a new file system from scratch, while our work focuses on building tools for existing file systems. Chen et al.~\cite{chen2015using} use logical address spaces as abstractions
-for writing higher-level file system specifications in a concise manner.
+for writing higher-level file system specifications.
 %without needing to handle the details of the underlying implementation that has already been proved. 
-This idea inspired our use of an address space type for specifying pointers. Another method for specifying pointers is by defining paths that enable traversing the metadata tree to locate a metadata object, such as finding the inode structure
-when given an inode number~\cite{hesselink2009formalizing,gardner2014local}. These approaches focus on the correctness of file-system operations at the virtual file system layer, whereas our goal is to specify the
-physical structures of file systems.
+This idea inspired our use of an address space type for specifying pointers. Another method for specifying pointers is by defining paths that enable traversing the metadata tree to locate a metadata object, such as finding the inode structure from an inode number~\cite{hesselink2009formalizing,gardner2014local}. These approaches focus on the correctness of file-system operations at the virtual file system layer, whereas our goal is to specify the physical structures of file systems.
 
 \vspace{-1ex}
