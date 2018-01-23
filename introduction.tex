@@ -14,7 +14,7 @@ There are many file-system aware storage applications that bypass the virtual fi
 \hline 
 {\small{}File system checker~\cite{Gunawi08b}} & {\small{}either} & \multirow{4}{*}{{\small{}reliability}}\tabularnewline
 \cline{1-2} 
-{\small{}Data recovery tool~\cite{buckeye2006recovering}} & {\small{}either} & \tabularnewline
+{\small{}Data recovery tool~\cite{buckeye2006recovering}} & {\small{}offline} & \tabularnewline
 \cline{1-2} 
 {\small{}IO shepherding~\cite{Gunawi07}} & {\small{}online} & \tabularnewline
 \cline{1-2} 
@@ -24,9 +24,9 @@ There are many file-system aware storage applications that bypass the virtual fi
 \cline{1-2} 
 {\small{}Partition editor~\cite{gedak2012manage}} & {\small{}offline} & \tabularnewline
 \hline 
-{\small{}Type-specific corruption~\cite{bairavasundaram2008analyzing}} & {\small{}either} & \multirow{2}{*}{{\small{}debugging}}\tabularnewline
+{\small{}Type-specific corruption~\cite{bairavasundaram2008analyzing}} & {\small{}offline} & \multirow{2}{*}{{\small{}debugging}}\tabularnewline
 \cline{1-2} 
-{\small{}Metadata dump tool} & {\small{}either} & \tabularnewline
+{\small{}Metadata dump tool} & {\small{}offline} & \tabularnewline
 \hline 
 \end{tabular}
 \vspace{-7pt}
@@ -44,7 +44,7 @@ Today, developers of these storage applications perform ad-hoc processing of fil
 To make matters worse, many file systems do not provide detailed and up-to-date documentation of their metadata format. The ad-hoc processing performed by these storage applications is thus error-prone and can lead to system instability, security vulnerability, and data corruption~\cite{bangert2014nail}.  For example, \texttt{fsck} can sometimes further corrupt a file system~\cite{yang2006using}. Some storage applications reduce the amount of file-system specific code in their implementation by modifying their target file system and operating system~\cite{Mesnier2011,Gunawi07}. This approach only works for specific file systems, and can introduce its own bugs. It also requires custom system software, which may be impractical in virtual machine and cloud environments.
 
 Our aim is to reduce the burden of developing file-system aware storage applications. To do so, we enable file system developers to specify the format of their file system using a domain-specific language so that the file system metadata can be parsed, traversed and updated correctly. We introduce Spiffy,\footnote{\textbf{Sp}ecifying and \textbf{I}nterpreting the \textbf{F}ormat of \textbf{F}iles\textbf{y}stems} a language for annotating file system data structures defined in the C language. Spiffy allows file system developers to unambiguously specify the \emph{physical} layout of the file system. The annotations handle low level details such as the encoding of specific fields, and the pointer relationships between file system structures.
-We compile the annotated sources to generate a Spiffy library that provides interfaces for type-safe parsing, traversal and update of file system metadata. The library allows a developer to write actions for different pieces of file system metadata, invoking file-system specific or generic code as needed, for their offline or online application. {\color{red}We currently support online applications that need to read, but not modify, metadata, such as differentiated storage services~\cite{Mesnier2011}.}
+We compile the annotated sources to generate a Spiffy library that provides interfaces for type-safe parsing, traversal and update of file system metadata. The library allows a developer to write actions for different pieces of file system metadata, invoking file-system specific or generic code as needed, for their offline or online application. {\color{red}We support online applications that need to read metadata, such as differentiated storage services~\cite{Mesnier2011}, but not ones that need to modify metadata such as online defragmentation.}
 
 The generic interfaces provided by the library simplify the development of applications that work across different file systems. Consider an application that shows file-system fragmentation by plotting a histogram of the size of free extents in the file system. This application needs to traverse the file system to find and parse structures that represent free space, and then collect the extent information. With Spiffy, the application code for finding and parsing structures is similar for different file systems. File-system specific actions are only needed for collecting the extent information from the free space structures (e.g., bitmaps for Ext4 and free space extents for Btrfs).
 
