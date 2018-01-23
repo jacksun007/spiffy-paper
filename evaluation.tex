@@ -54,13 +54,49 @@ the Ext4 inode structure and replaced \texttt{i\_block} with the extent header
 followed by four extent entries.
 \end{enumerate}
 
+\iffalse
+\begin{table}
+\small
+\begin{centering}
+\begin{tabular}{c|c|c|c|c|}
+\cline{2-5} & \multicolumn{4}{c|}{Line of Code (C++)} \\
+\hline
+\multicolumn{1}{|c|}{Tool Name} & Generic & Ext4 & Btrfs & F2FS \\
+\hline 
+\hline 
+\multicolumn{1}{|c|}{Dump Tool} & 565 & 50 & 45 & 37 \\
+\hline 
+\multicolumn{1}{|c|}{Metadata Corruptor} & 455 & 28 & 28 & 20 \\
+\hline 
+\multicolumn{1}{|c|}{Free Space Tool} & 271 & 76 & 77 & 194 \\
+\hline 
+\multicolumn{1}{|c|}{Runtime Interpretor} & 2158 & 111 & 134 &  \\
+\hline 
+\end{tabular}
+\par\end{centering}
+\vspace{-5pt}
+\caption{\label{tab:tools-loc}Line of code count for each tool.}
+\vspace{-5pt}
+\end{table}
+\fi
+
 \subsection{Developer Effort\label{subsec:Developer-Effort}}
 
-%In this section, we evaluate the effort required to develop Spiffy applications. 
+%Table~\ref{tab:tools-loc} summarizes the effort required to build each of our tools.
 
-\noindent\textbf{Dump Tool:} The file system dump tool includes a file-system independent XML writer module, written in 482 lines of C++ code. The main function for each file system is written in 30 to 60 lines of code, depending on the number of structures the programmer wants to skip. The dump tool is helpful for debugging issues with real file systems, and to verify the correctness of the annotations. In particular, an expert can verify that the annotations are correct when the output of the dump tool matches the expected contents of the file system. Therefore, this tool has become an integral part of our development process.
+%The file system dump tool includes a file-system independent XML writer module. The LOC for each file system depends on the number of structures the programmer wants to skip. The dump tool is helpful for debugging issues with real file systems, and to verify the correctness of the annotations. In particular, an expert can verify that the annotations are correct when the output of the dump tool matches the expected contents of the file system. Therefore, this tool has become an integral part of our development process.
 
-\noindent\textbf{Free Space Tool:} The file system free space tool has 271 lines of file-system independent C++ code. File-system specific parts require 76 lines for Ext4, 77 lines for Btrfs, and 194 lines for F2FS. F2FS requires more code due to the complex format of its block allocation information.
+%The type-specific file system metadata corruptor takes similar programming effort as the dump tool, with even less bootstrap code required since the structure that the user wants to corrupt is specified via the command line. The file system free space tool, on the other hand, requires more file-system specific code to parse metadata related to block allocation. F2FS requires more code due to the complex format of its block allocation information.
+
+%The original Bcache code consisted of 10518 lines of code. To implement prioritized caching we added 289 lines to this code, which invokes our generic runtime metadata interpretation framework. This framework provides hooks to specify file-system specific policies. Currently, we have not implemented prioritized caching for F2FS, which would require tracking NAT entries, similar to how we track inode numbers for Btrfs to find file extents.
+
+% (jsun): Do we really need to say C++ code over and over...?
+ 
+\noindent\textbf{Dump Tool:} The file system dump tool includes a file-system independent XML writer module, written in 565 lines of code. The main function for each file system is written in 40 to 50 lines of code, depending on the number of structures the programmer wants to skip. The dump tool is helpful for debugging issues with real file systems, and to verify the correctness of the annotations. In particular, an expert can verify that the annotations are correct when the output of the dump tool matches the expected contents of the file system. Therefore, this tool has become an integral part of our development process.
+
+\noindent\textbf{Type-Specific Corruptor:} The type-specific corruption tool is written in 455 lines of code, with less than 30 lines of code required for the main function of each file system. The structure that the user wants to corrupt is specified via the command line and the tool uses type introspection to find it.
+
+\noindent\textbf{Free Space Tool:} The file system free space tool has 271 lines of file-system independent code. File-system specific parts require 76 lines for Ext4, 77 lines for Btrfs, and 194 lines for F2FS. F2FS requires more code due to the complex format of its block allocation information.
 
 \noindent\textbf{Conversion Tool:} The Spiffy file system conversion tool framework is written in 504 lines of code. The code for reading Ext4 takes 218 lines, the code to convert to the F2FS file system requires 1760 lines, and the file-system developer code for F2FS, which is reused in other applications such as the dump tool, consists of 383 lines. We also wrote a manual converter tool that uses the \texttt{libext2fs}~\cite{tso-e2fsprogs} library to copy Ext4 metadata from the source file system, and manually writes raw data to create an F2FS file system. The manual converter has 223 lines of Ext4 code, and 2260 lines for the F2FS code. In this case, the two converters have similar number of lines of code, but the Spiffy converter has several other benefits. On the source side, the manual converter takes advantage of the \texttt{libext2fs} library. Changing this code for a different file system would require significant effort, and would require much more code for a file system such as ZFS that does not have a similar user-level library. On the destination side, the Spiffy converter requires many file-system specific lines of code to manually initialize each newly created object. However, Spiffy uses the \texttt{create\_container} and \texttt{save} functions to create and serialize objects in a type-safe manner, and checks constraints on objects, while the manual converter writes raw data, which is error-prone, leading to the types of bugs discussed in Section~\ref{sec:Extended-Motivation}.
 
@@ -135,16 +171,14 @@ We also tried an extensive set of random corruption experiments, and none of the
 \begin{centering}
 \begin{tabular}{|c|c|c|c|}
 \hline 
-\# files & Copy Converter & Manual Conv. & Spiffy Conv. \tabularnewline
-%\hline
-%File set size & 16.12GB & 16.13GB & 16.27GB \tabularnewline
+\# files & Copy Converter & Manual Conv. & Spiffy Conv. \\
 \hline 
 \hline 
-20000 & $188.2 \pm 3.7$s & $6.6\pm 0.5$s  & $7.0 \pm 0.2$s \tabularnewline
+20000 & $188.2 \pm 3.7$s & $6.6\pm 0.5$s  & $7.0 \pm 0.2$s \\
 \hline 
-1000 & $192.7 \pm 2.3$s & $3.3 \pm 0.1$s & $3.8 \pm 0.0$s \tabularnewline
+1000 & $192.7 \pm 2.3$s & $3.3 \pm 0.1$s & $3.8 \pm 0.0$s \\
 \hline 
-100 & $195.1 \pm 0.2$s & $3.3 \pm 0.1$s & $3.7 \pm 0.1$s\tabularnewline
+100 & $195.1 \pm 0.2$s & $3.3 \pm 0.1$s & $3.7 \pm 0.1$s \\
 \hline 
 \end{tabular}
 \par\end{centering}
