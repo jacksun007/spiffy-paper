@@ -3,7 +3,7 @@
 
 We motivate this work by presenting various bugs caused by incorrect parsing of file-system metadata in storage applications (outlined in Table~\ref{tab:Bug-reports}). Some of these bugs cause crashes, while others may result in file system corruption. For each bug, we discuss the root cause.% and how our approach can help avoid it.
 
-\begin{enumerate}[leftmargin=0.15in,itemsep=-0.25ex]
+\begin{enumerate}[leftmargin=0.15in,itemsep=-0.5ex]
 
 \item An extra memory allocation caused uninitialized bytes to be written to the boot jump field of Fat32 file systems during resizing. Since Windows depends on the correctness of this field, the bug rendered the file system unrecognizable by the operating system.
 
