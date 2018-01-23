@@ -127,14 +127,18 @@ dump.f2fs & super block & \texttt{log\_blocks\_per\_seg} & index out of bound er
 
 \subsection{Corruption Experiments\label{subsec:corruption_experiment}}
 
-We use our type-specific corruption tool to evaluate the robustness of Spiffy generated libraries. We ran a series of type-specific corruption experiments on existing file system dump tools and the Spiffy dump tool. The corruption experiment takes a 128MB file system image filled with 12000 tiny files (less than 4 bytes) and some directories, then corrupts a specific field of a selected instance of a specified type (e.g., one of the inode structures). The field is either corrupted to a random value or to zero.
+We use our type-specific corruption tool to evaluate the robustness of Spiffy generated libraries. The corruption experiment takes a 128MB file system image filled with 12,000 files and some directories, then corrupts a specific field of a selected instance of a specified type (e.g., one of the inode structures) to create a corrupted file system image. We corrupt each field in each metadata structure three times, twice to a random value and once to zero.
 
-The Spiffy dump tool was able to generate correctly formatted XML files in the face of arbitrary single-field corruptions. When corruption is detected during the parsing of a container or a pointer fetch (i.e., pointer address is out-of-bound or fails a placement constraint), an error is printed and the program stops the traversal.% process.
+%We ran a series of type-specific corruption experiments on existing file system dump tools and the Spiffy dump tool. 
 
-We also run existing tools on the same corrupted images. Table~\ref{tab:corruption-result} 
-describes the crashes we found during the experiments. For dumpe2fs (dump tool for Ext4) v1.42.13, we found a single crash when the \texttt{s\_creator\_os} field of the super block is corrupted. For dump.f2fs v1.6.1-1, we observed 5 instances of segmentation faults and multiple cases of assertion errors. Three of the crashes were due to corruption in the super block, and one crash each was detected for the summary block and inode structures. We were unable to trigger any crash-related bugs in btrfs-debug-tree v4.4.
+The Spiffy dump tool was able to generate correctly formatted XML files in the face of arbitrary single-field corruptions for all of these images. When corruption is detected during the parsing of a container or a pointer fetch (i.e., pointer address is out-of-bound or fails a placement constraint), an error is printed and the program stops the traversal.% process.
 
-These results are not unexpected since F2FS is a relatively young file system. Btrfs uses metadata checksumming to detect metadata corruption, and thus requires the corruption to be injected before checksum generation to fully test the robustness of its dump tool.  Lastly, Ext4's dumpe2fs tool does not traverse the full file system metadata, and so does not encounter most of the metadata corruption. Our Spiffy dump tool is both more complete and more robust than dumpe2fs, without requiring significant testing effort.
+Table~\ref{tab:corruption-result} 
+describes the crashes we found when we ran existing tools on the same corrupted images. For dumpe2fs (dump tool for Ext4) v1.42.13, we found a single crash when the \texttt{s\_creator\_os} field of the super block is corrupted. For dump.f2fs v1.6.1-1, we observed 5 instances of segmentation faults.
+% and multiple cases of assertion errors. 
+Three of the crashes were due to corruption in the super block, and one crash each was detected for the summary block and inode structures. We were unable to trigger any crash-related bugs in btrfs-debug-tree v4.4.
+
+These results are not unexpected since F2FS is a relatively young file system. Btrfs uses metadata checksumming to detect corruption, and thus requires corruption to be injected before checksum generation to fully test the robustness of its dump tool.  Lastly, dumpe2fs does not traverse the full file system metadata, and so does not encounter most of the metadata corruption. Our Spiffy dump tool is both more complete and more robust than dumpe2fs, without requiring significant testing effort.
 
 We also tried an extensive set of random corruption experiments, and none of the existing tools had crashes, showing that our type-specific corruptor is a useful tool for testing the robustness of these applications.
 
