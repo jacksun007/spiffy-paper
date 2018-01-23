@@ -256,8 +256,8 @@ void main(void) {
 
 The correctness of Spiffy applications depends on correctly written annotations. Therefore, if and when file system format changes do occur, the specifications will need to be updated. Spiffy applications will also need to update all file-system specific code that is affected by the format changes. These changes will likely only affect code that directly operates on the updated metadata structures, since the Spiffy library will provide safe traversal and parsing of any intermediate structures.
 
-{\color{red}Our current support for online applications (see Section~\ref{sec:Implementation}) is limited to reading file system metadata. Support for general online metadata modifications will require an infrastructure similar to IO shepherding~\cite{Gunawi07}. Spiffy can help simplify the shepherding design with its parsing and serialization routines, and thus avoid any need to make changes to file systems.}
-
+{\color{red}Currently, we have implemented an online application at the storage layer (metadata caching, see Section~\ref{sec:Implementation}) that reads file system metadata, but does not modify it. We are exploring modifying file system metadata using Spiffy at the storage layer (which requires hooks into the file system code, e.g., for transactions and allocation~\cite{Gunawi07}), and at the file system level (which enables more powerful applications).}
+  
 Unlike typical file-system applications that operate at the VFS layer and are file-system independent, Spiffy applications operate directly on file-system specific structures and are thus file-system dependent. Since file systems share common abstractions (e.g. files, directories, inodes), it may be possible to carefully abstract the functionality that is shared between implementations, reducing file-system dependence even further.
 
 %% Ashvin - unless we have specific examples of problems, I would like to avoid mentioning this right now.
