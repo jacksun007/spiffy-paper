@@ -16,18 +16,12 @@
 \usepackage{makecell}
 \usepackage{enumitem}
 
-%\usepackage{titlesec}
-
 \makeatletter
 \providecommand{\tabularnewline}{\\}
 \date{}
 
 \renewcommand{\dblfloatpagefraction}{0.95}
 \renewcommand{\floatpagefraction}{0.95}
-
-% (jsun): this adds the section symbol in front of section references 
-%\renewcommand*{\p@section}{\S\,}
-%\renewcommand*{\p@subsection}{\S\,}
 
 \setlength{\belowcaptionskip}{-1ex}
 \usepackage{listings}
@@ -107,7 +101,7 @@ Our experiments show that applications that use the library to access file syste
 Spiffy is an annotation language for specifying the on-disk file system data structures. File system developers annotate their data structures using Spiffy, which enables generating a library that allows parsing and traversing file system data structures correctly.
 
 %We have demonstrated the simplicity and expressiveness of the language, and 
-We have shown the generality of our approach by annotating three vastly different file systems. The annotated file system code serves as a detailed documentation for the metadata structures and the relationships between them. File-system aware storage applications can use the Spiffy libraries to improve their resilience against parsing bugs, and to reduce the overall programming effort needed for supporting file-system specific logic in these applications. Our evaluation suggests that applications using the generated libraries perform reasonably well. We believe our approach will enable interesting applications that require an understanding of storage structures.
+We have shown the generality of our approach by annotating three vastly different file systems. The annotated file system code serves as detailed documentation for the metadata structures and the relationships between them. File-system aware storage applications can use the Spiffy libraries to improve their resilience against parsing bugs, and to reduce the overall programming effort needed for supporting file-system specific logic in these applications. Our evaluation suggests that applications using the generated libraries perform reasonably well. We believe our approach will enable interesting applications that require an understanding of storage structures.
 
 \section*{Acknowledgements}
 We thank the anonymous reviewers and our shepherd, Andr\'e Brinkmann, for 

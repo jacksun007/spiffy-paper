@@ -2,6 +2,7 @@
 
 We have written five file-system aware storage applications using the Spiffy framework: a dump tool, a free space reporting tool, a type-specific metadata corruptor, a file system conversion tool, and a prioritized block layer cache. The first four applications operate offline, while the last one is an online application. 
 
+\vspace{-2pt}
 \paragraph*{File System Dump Tool}
 
 The file system dump tool parses all the metadata in a file system image and exports the result in an XML format, using file system traversal code similar to the example in Figure~\ref{fig:fs-traversal-example}. In addition to \texttt{process\_pointers}, the entity class provides a \texttt{process\_fields} method that allows iterating over all fields (not just pointer fields) of the class. The dump tool can be configured to prevent structures such as unallocated inode structures from being exported.
@@ -10,12 +11,14 @@ The file system dump tool parses all the metadata in a file system image and exp
 
 %% For each file system, a main function initializes an instance of the file system class, the address space translation module, and the XML writer, and then runs file system traversal code similar to the example shown in Figure~\ref{fig:fs-traversal-example}.
 
+\vspace{-2pt}
 \paragraph*{Type-Specific Corruption Tool}
 
 This tool is a variant of the dump tool that injects file-system corruption in a type-specific manner~\cite{bairavasundaram2008analyzing}, allowing us to test the robustness of file systems and their tools. When we decide to corrupt a field, we cannot simply modify its in-memory value, since serialization is type-safe. For example, the serializer will refuse to serialize a corrupted value that violates its type constraints. Instead, corruption is performed after a block is serialized but before it is written.
 
 % For example, if we increase the length of a directory entry, the serialized directory block will shift the rest of the entries. 
 
+\vspace{-2pt}
 \paragraph*{Free Space Tool}
 
 This tool shows file-system fragmentation by plotting a histogram of the size of free extents. The tool retrieves the metadata structures that store free space information and processes them (e.g., block bitmaps for Ext4, extent items for Btrfs, and segment information table (SIT) for F2FS). This logic is implemented using \texttt{process\_by\_type} (see Table~\ref{tab:library-api}) and a custom visit function that processes all the retrieved metadata structures. Code to traverse the file system and parse intermediate structures is provided by our library. 
@@ -27,9 +30,10 @@ This tool shows file-system fragmentation by plotting a histogram of the size of
 
 %This additional complexity is the cause for the greater line count of the F2FS specific functionality.  The generic code contains a routine for detecting the file system type of an image, which executes the correct file system specific code.
 
+\vspace{-2pt}
 \paragraph*{File System Conversion Tool}
 
-Converting an existing file system into a file system of another type is a time-consuming process, involving copying files to another disk, reformatting the disk, and then copying the files back to the new file system. In-place file system conversion that updates file system metadata without moving most file data can speed up the conversion dramatically. While some such conversion tools exist,\footnote{The {convert} utility converts FAT32 to NTFS~\cite{fat-to-ntfs}, and an iOS update upgrades APFS from HFS+~\cite{apfs-upgrade}} they are hard to implement correctly and generally not available.
+Converting an existing file system into a file system of another type is a time-consuming process, involving copying files to another disk, reformatting the disk, and then copying the files back to the new file system. In-place file system conversion that updates file system metadata without moving most file data can speed up the conversion dramatically. While some such conversion tools exist,\footnote{The {convert} utility converts FAT32 to NTFS~\cite{fat-to-ntfs}, and updating to iOS 10.3 upgrades the file system from HFS+ to APFS~\cite{apfs-upgrade}} they are hard to implement correctly and not generally available.
 
 % such techniques are also used for upgrading a file system to a newer version, s
 
@@ -64,6 +68,7 @@ Fortunately, various pieces of the code can be reused for different combinations
 %\vspace{-8pt}
 %\end{figure}
 
+\vspace{-2pt}
 \paragraph{Prioritized Block Layer Cache}
 
 We have implemented a file-system aware block layer cache based on Bcache \cite{Bcache2016}. Our cache preferentially caches the files of certain priority users, identified by the \texttt{uid} of the file. This caching policy can dramatically improve workload performance by improving the cache hit rate for prioritized workloads, as shown in previous work~\cite{sw-defined-caching-2015}.  Bcache uses an LRU replacement policy; in our implementation, blocks belonging to priority users are given a second chance and are only evicted if they return to the head of the LRU list without being referenced.

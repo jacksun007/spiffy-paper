@@ -30,6 +30,7 @@ Every annotated structure is wrapped in a class that allows introspection. Each 
 
 %% Ashvin - There are some optimization that Spiffy has yet to implement, such as support for readahead while iterating through contiguous extents.
 
+\vspace{-2pt}
 \paragraph*{Address Spaces}
 
 
@@ -43,6 +44,7 @@ Every annotated structure is wrapped in a class that allows introspection. Each 
 
 Annotation developers must implement the \texttt{IO} interface shown in Table~\ref{tab:library-api}. The Ext4 file address space implementation for the \texttt{Ext4IO} class (see Figure~\ref{fig:fs-traversal-example}) requires fetching the file contents associated with an inode number. For Btrfs, we currently support the RAID address space for a single device, which only allows metadata mirroring (RAID-1). For F2FS, we support the NID address space, which maps a NID (node id) to a node block. The implementation involves a lookup to see if a valid mapping entry is in the journal. If not, the mapping is obtained from the node address table.
 
+\vspace{-2pt}
 \paragraph*{Runtime Interpretation}
 
 Offline Spiffy applications use variants of the file-system traversal algorithm in Figure~\ref{fig:fs-traversal-example}. Spiffy also supports online file-system aware storage applications via a kernel module that performs file system interpretation at the block layer of the Linux kernel using the generated libraries. These storage applications are typically difficult to write and error prone, since manual parsing code is needed for each block type. However, our implementation only requires a small amount of bootstrap code to support any annotated file system. The rest of the code is file-system independent.
