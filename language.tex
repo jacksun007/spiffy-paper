@@ -154,7 +154,7 @@ pointers. For example, Figure~\ref{fig:btrfs_super_block} shows
 that the Btrfs ``tree of tree'' root points to a B-tree leaf when
 the level of the tree is 0, or else it points to a B-tree node. In
 this case, two pointer annotations are needed to specify each of the
-pointed-to types and their when clauses. The \texttt{size} argument
+pointed-to types and their \texttt{when} expression. The \texttt{size} argument
 is useful when the structure that contains the pointer also stores
 the information about the size of the pointed-to structure. This may
 be the case when the pointed-to structure is variable-sized or a data
@@ -271,7 +271,7 @@ Figure~\ref{fig:btrfs_item} shows the annotated Btrfs leaf node
 (\texttt{btrfs\_leaf}), containing a vector of \texttt{btrfs\_item}
 structures. The \texttt{btrfs\_item} structure defines implicit fields
 with the \texttt{FIELD} annotation. These fields use the \texttt{when}
-clause to point to all the different types of metadata objects that
+expression to point to all the different types of metadata objects that
 can be stored in a leaf object. The \texttt{offset} field is an offset
 to a metadata object from the end of the header field of \texttt{btrfs\_leaf},
 and so we must add this value to obtain the offset from the beginning
