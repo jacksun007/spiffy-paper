@@ -3,7 +3,6 @@ paper.bbl
 paper.blg
 paper.log
 paper.out
-paper.pdf
 paper.fls
 paper.fdb_latexmk
 paper-diff.aux
@@ -14,7 +13,7 @@ paper-diff.fls
 paper-diff.log
 paper-diff.out
 paper-diff.tex
-paper-diff.pdf
 paper-full-orig.tex
 paper-full.tex
 ~*
+*.pdf
